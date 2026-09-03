@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>② クリニック順番管理システム (進行管理パネル)</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 20px; background-color: #f0f4f8; color: #333; }
+        h1 { font-size: 20px; color: #2c3e50; margin: 0; }
+        
+        /* 上部ヘッダーエリア */
+        .header-zone { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+        
+        /* 業務終了・集計ボタンとログエリア */
+        .end-day-btn { background-color: #e74c3c; color: white; padding: 10px 15px; font-size: 14px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .end-day-btn:hover { background-color: #c0392b; }
+        .summary-log { background: #eef2f7; border: 1px solid #ccdaf0; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; display: none; }
+        .summary-log h3 { margin: 0 0 8px 0; color: #1f3a60; font-size: 15px; }
+
+        /* テーブル設定 */
+        .table-container { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th, td { padding: 10px 10px; border-bottom: 1px solid #dee2e6; vertical-align: middle; }
+        th { background-color: #f8f9fa; color: #2c3e50; font-weight: bold; }
+        
+        /* 行背景色：通常は白、完了はご要望通り「少し濃いグレー」に */
+        tr { background-color: #fff; }
+        .row-completed { background-color: #cbd5e1 !important; color: #475569; }
+
+        .badge { font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
+        .badge-walkin { background-color: #2980b9; color: white; }
+        .badge-reserve { background-color: #27ae60; color: white; }
+        
+        .btn-group { display: flex; gap: 6px; align-items: center; }
+        
+        /* 普段は白抜き・薄グレーのボタン */
+        button.status-toggle { 
+            padding: 8px 14px; 
+            font-size: 12px; 
+            font-weight: bold; 
+            border: 2px solid #bdc3c7; 
+            background-color: #ffffff; 
+            color: #7f8c8d; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            transition: all 0.15s ease;
+        }
+        
+        /* クリックされたら鮮やかに発色 */
+        button.active-waiting { border-color: #34495e; background-color: #34495e; color: white; }
+        button.active-calling { border-color: #e74c3c; background-color: #e74c3c; color: white; }
+        button.active-testing { border-color: #e67e22; background-color: #e67e22; color: white; }
+        button.active-examining { border-color: #2ecc71; background-color: #2ecc71; color: white; }
+        button.active-completed { border-color: #64748b; background-color: #64748b; color: white; }
+        
+        .time-label { font-family: monospace; font-size: 13px; color: #333; }
+        .row-completed .time-label { color: #475569; }
+    </style>
+</head>
+<body>
+
+    <div class="header-zone">
+        <h1>🖥️ 当日進行管理台帳パネル</h1>
+        <button class="end-day-btn" onclick="endDayProcess()">📊 本日の業務を終了して集計する</button>
+    </div>
+
+    <!-- 集計結果の記録表示エリア -->
+    <div id="summary-log-zone" class="summary-log">
+        <h3>📈 前回の業務集計レポート</h3>
+        <div id="summary-text"></div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60px; text-align: center;">受付順</th>
+                    <th style="width: 180px;">区分・番号/予約枠</th>
+                    <th style="width: 100px;">受付時刻</th>
+                    <th>進行操作コントロール（選択すると鮮やかに色がつきます）</th>
+                    <th style="width: 100px;">完了時刻</th>
+                </tr>
+            </thead>
+            <tbody id="patient-table-body">
+                <!-- 受付順リスト -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let patients = [];
+        const channel = new BroadcastChannel('clinic_sync_channel');
+
+        // 時間取得用ヘルパー (時刻を12時間表示形式の文字列にする)
+        function getNowHHMM12H() {
+            const now = new Date();
+            let hh = now.getHours();
+            if (hh >= 12) {
+                hh = hh - 12;
+                if (hh === 0) hh = 12;
+            }
+            return `${hh}:${String(now.getMinutes()).padStart(2, '0')}`;
+        }
+       channel.onmessage = (event) => {
+            if (event.data.addFromReception) {
+                const newPatient = event.data.patient;
+                newPatient.regTime = getNowHHMM12H();
+                newPatient.regTimestamp = Date.now(); // 平均時間計算用のタイムスタンプ
+                newPatient.compTime = '---';
+                patients.push(newPatient);
+                saveAndSync();
+            } 
+            else if (event.data.cancelFromReception) {
+                patients = patients.filter(p => p.id !== event.data.patientId);
+                saveAndSync();
+            }
+            else if (event.data.requestData) {
+                channel.postMessage(patients);
+            }
+        };
+
+        function setStatus(id, targetStatus) {
+            if (targetStatus === 'calling') {
+                patients.forEach(p => { if (p.status === 'calling') p.status = 'testing'; });
+            }
+            
+            if (targetStatus === 'examining') {
+                patients.forEach(p => { if (p.status === 'examining') p.status = 'testing'; });
+            }
+
+            const p = patients.find(p => p.id === id);
+            if (p) {
+                p.status = targetStatus;
+                if (targetStatus === 'completed') {
+                    p.compTime = getNowHHMM12H();
+                    p.compTimestamp = Date.now(); // 完了時のタイムスタンプ
+                } else {
+                    p.compTime = '---';
+                    delete p.compTimestamp;
+                }
+                saveAndSync();
+            }
+        }
+
+        // 1日の業務終了プロセス（集計と自動クリア）
+        function endDayProcess() {
+            if (patients.length === 0) {
+                alert('集計する患者データがありません。');
+                return;
+            }
+
+            const activeCount = patients.filter(p => p.status !== 'completed').length;
+            if (activeCount > 0) {
+                if (!confirm(`まだ診察・会計が完了していない患者様が ${activeCount} 名います。\nこのまま無理やり終了して集計しますか？`)) {
+                    return;
+                }
+            }
+
+            if (confirm('本日の業務を終了し、データを集計して画面をクリアします。よろしいですか？')) {
+                const totalCount = patients.length;
+                let totalDurationMinutes = 0;
+                let completedCount = 0;
+
+                patients.forEach(p => {
+                    if (p.regTimestamp && p.compTimestamp) {
+                        const diffMs = p.compTimestamp - p.regTimestamp;
+                        const diffMins = Math.round(diffMs / 1000 / 60);
+                        totalDurationMinutes += diffMins;
+                        completedCount++;
+                    }
+                });
+
+                const averageTime = completedCount > 0 ? Math.round(totalDurationMinutes / completedCount) : 0;
+                
+                const logZone = document.getElementById('summary-log-zone');
+                const textZone = document.getElementById('summary-text');
+                const today = new Date().toLocaleDateString('ja-JP');
+                
+                textZone.innerHTML = `
+                    <strong>実施日:</strong> ${today} <br>
+                    <strong>① 本日の総受付患者数:</strong> ${totalCount} 名 <br>
+                    <strong>② 患者1人あたりの平均所要時間 (受付～完了):</strong> ${averageTime} 分
+                `;
+                logZone.style.display = 'block';
+
+                patients = [];
+                saveAndSync();
+                
+                alert('本日の集計が完了し、台帳と発券ボタンがリセットされました。');
+            }
+        }
+
+        function saveAndSync() {
+            channel.postMessage(patients);
+            updateDOM();
+        }
+
+        function updateDOM() {
+            const tbody = document.getElementById('patient-table-body');
+            tbody.innerHTML = '';
+
+            if (patients.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #95a5a6; padding: 30px;">本日の受付患者データはありません</td></tr>`;
+                return;
+            }
+
+            patients.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                if (p.status === 'completed') tr.className = 'row-completed';
+
+                const isW = p.type === 'walkin';
+                const badgeClass = isW ? 'badge-walkin' : 'badge-reserve';
+                const badgeText = isW ? '当日' : '予約';
+
+                const wClass = p.status === 'waiting' ? 'active-waiting' : '';
+                const cClass = p.status === 'calling' ? 'active-calling' : '';
+                const tClass = p.status === 'testing' ? 'active-testing' : '';
+                const eClass = p.status === 'examining' ? 'active-examining' : '';
+                const cpClass = p.status === 'completed' ? 'active-completed' : '';
+
+                let cleanLabel = p.monitorLabel;
+
+                tr.innerHTML = `
+                    <td class="time-label" style="font-weight: bold; text-align: center;">${index + 1}</td>
+                    <td><span class="badge ${badgeClass}">${badgeText}</span> <strong>${cleanLabel}</strong></td>
+                    <td class="time-label">${p.regTime || '---'}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="status-toggle ${wClass}" onclick="setStatus('${p.id}', 'waiting')">受付中</button>
+                            <button class="status-toggle ${cClass}" onclick="setStatus('${p.id}', 'calling')">呼出</button>
+                            <button class="status-toggle ${tClass}" onclick="setStatus('${p.id}', 'testing')">診察待ち（保留・検査）</button>
+                            <button class="status-toggle ${eClass}" onclick="setStatus('${p.id}', 'examining')">診察中</button>
+                            <button class="status-toggle ${cpClass}" onclick="setStatus('${p.id}', 'completed')">完了</button>
+                        </div>
+                    </td>
+                    <td class="time-label" style="font-weight: bold;">${p.compTime}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
