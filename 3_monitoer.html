@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>③ 待合室順番表示モニター (最新レイアウト確定版)</title>
+    <style>
+        body { 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #2c3e50; 
+            color: white; 
+            height: 100vh; 
+            box-sizing: border-box; 
+            display: flex; 
+            gap: 20px;
+            overflow: hidden; 
+        }
+        
+        h2 { 
+            color: white; 
+            border-bottom: 3px solid #1abc9c; 
+            font-size: 22px; 
+            padding-bottom: 8px; 
+            margin: 0 0 12px 0; 
+        }
+
+        .left-area {
+            flex: 1.1; 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .right-area {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+            min-height: 0; 
+        }
+
+        .monitor-col { 
+            background: rgba(255, 255, 255, 0.05); 
+            padding: 15px 20px; 
+            border-radius: 10px; 
+            box-sizing: border-box;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; 
+        }
+        
+        /* 左側：メイン大型看板 */
+        .calling-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* 上・中・下で綺麗に配置を分ける */
+            align-items: center;
+            text-align: center;
+            border-radius: 10px;
+            padding: 30px 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        .status-calling { background: #e74c3c; border-left: 15px solid #c0392b; }
+        .status-examining { background: #27ae60; border-left: 15px solid #1e8449; }
+        
+        /* ご要望：お呼び出しがない時は背景を抑えめに */
+        .no-calling {
+            background: rgba(255,255,255,0.02);
+            border-left: 15px solid #5d6d7e;
+        }
+
+        .calling-title { font-size: 26px; font-weight: bold; letter-spacing: 2px; }
+        
+        /* 午前午後を除去した純粋な「数字」の超巨大表示エリア */
+        .calling-box { 
+            font-size: 72px; /* さらに数字を巨大化 */
+            font-weight: bold; 
+            line-height: 1.2;
+            word-break: break-all;
+        }
+        
+        .calling-message {
+            font-size: 24px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px 25px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        /* ご要望：「現在お呼び出しはありません」は一番下に小さく */
+        .calling-none-message {
+            font-size: 16px;
+            color: #a6acaf;
+            font-weight: normal;
+        }
+
+        /* 右側：グリッド */
+        .queue-grid { 
+            list-style: none; 
+            padding: 0; 
+            margin: 0; 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            grid-template-rows: repeat(2, 1fr);    
+            gap: 10px; 
+            flex: 1;
+            min-height: 0;
+            align-content: start; 
+        }
+
+        .patient-card { 
+            padding: 10px 5px; 
+            border-radius: 6px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            text-align: center;
+            color: white; 
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            height: calc(100% - 5px); 
+        }
+        .walkin-card { background-color: #2980b9; border-bottom: 4px solid #1f618d; }
+        .reserve-card { background-color: #27ae60; border-bottom: 4px solid #1e8449; }
+        .badge { font-size: 11px; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.2); margin-right: 5px; vertical-align: middle; }
+    </style>
+</head>
+<body>
+
+    <!-- 【左側】 案内大看板 -->
+    <div class="left-area">
+        <div id="calling-zone" class="calling-wrapper no-calling">
+            <div id="m-title" class="calling-title">順番表示案内</div>
+            <div id="m-calling" class="calling-box"><!-- 巨大数字 --></div>
+            <div id="m-msg" class="calling-message"><!-- メッセージ --></div>
+        </div>
+    </div>
+    
+    <!-- 【右側】 リスト上下 -->
+    <div class="right-area">
+        <div class="monitor-col">
+            <h2>お待ちの方（受付順）</h2>
+            <ul class="queue-grid" id="m-waiting"></ul>
+        </div>
+        <div class="monitor-col">
+            <h2>診察待ち（保留・検査中）</h2>
+            <ul class="queue-grid" id="m-testing"></ul>
+        </div>
+    </div>
+
+    <script>
+        const channel = new BroadcastChannel('clinic_sync_channel');
+
+        channel.onmessage = (event) => {
+            if (!event.data.requestData && !event.data.addFromReception && !event.data.cancelFromReception) {
+                updateDOM(event.data);
+            }
+        };
+
+        window.onload = function() {
+            channel.postMessage({requestData: true});
+        };
+
+        function updateDOM(patients) {
+            const mWait = document.getElementById('m-waiting');
+            const mTest = document.getElementById('m-testing');
+            const mCall = document.getElementById('m-calling');
+            const mMsg = document.getElementById('m-msg');
+            const mTitle = document.getElementById('m-title');
+            const callZone = document.getElementById('calling-zone');
+            
+            mWait.innerHTML = ''; 
+            mTest.innerHTML = ''; 
+
+            let activePatient = null;
+            let activeStatus = ''; 
+
+            const callingPatient = patients.find(p => p.status === 'calling');
+            const examiningPatient = patients.find(p => p.status === 'examining');
+
+            if (callingPatient) {
+                activePatient = callingPatient;
+                activeStatus = 'calling';
+            } else if (examiningPatient) {
+                activePatient = examiningPatient;
+                activeStatus = 'examining';
+            }
+
+            patients.forEach(p => {
+                const isW = p.type === 'walkin';
+                const badge = `<span class="badge">${isW ? '当日' : '予約'}</span>`;
+                // 右側のグリッド内カードも「午前・午後」を除去して見やすく
+                const cardHTML = `<div class="patient-card ${isW ? 'walkin-card' : 'reserve-card'}"><div>${badge}${p.monitorLabel}</div></div>`;
+
+                if (p.status === 'waiting') {
+                    const li = document.createElement('li'); li.innerHTML = cardHTML; mWait.appendChild(li);
+                } else if (p.status === 'testing') {
+                    const li = document.createElement('li'); li.innerHTML = cardHTML; mTest.appendChild(li);
+                }
+            });
+
+            // メイン案内看板の更新
+            if (activePatient) {
+                const isW = activePatient.type === 'walkin';
+                const badge = `<span class="badge">${isW ? '当日' : '予約'}</span>`;
+
+                // 「monitorLabel」を使うことで午前/午後の文字を削り、純粋な数字や予約時間だけにします
+                mCall.innerHTML = `${badge}<br><span style="font-size:76px; display:inline-block; margin-top:10px;">${activePatient.monitorLabel}</span>`;
+                
+                if (activeStatus === 'calling') {
+                    callZone.className = "calling-wrapper status-calling";
+                    mTitle.innerHTML = "只今お呼び出し中";
+                    mMsg.className = "calling-message";
+                    mMsg.innerHTML = "診察室の前の席でお待ちください";
+                } else {
+                    callZone.className = "calling-wrapper status-examining";
+                    mTitle.innerHTML = "只今診察中";
+                    mMsg.className = "calling-message";
+                    mMsg.innerHTML = "ただいま診察中です";
+                }
+            } else {
+                // 【ご要望】誰も選択されていないときは、下部に小さく表示
+                callZone.className = "calling-wrapper no-calling";
+                mTitle.innerHTML = "順番案内";
+                mCall.innerHTML = `<span style="font-size:24px; color:#7f8c8d;">診察のご案内</span>`;
+                mMsg.className = "calling-none-message"; // 下部用の小さいスタイルに変更
+                mMsg.innerHTML = "現在お呼び出しはありません";
+            }
+        }
+    </script>
+</body>
+</html>
