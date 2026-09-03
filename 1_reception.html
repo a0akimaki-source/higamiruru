@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>① クリニック発券・受付システム</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 20px; background-color: #f0f4f8; color: #333; }
+        h1 { font-size: 20px; color: #2c3e50; margin-bottom: 25px; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+        
+        /* 午前・午後の大きなブロック分け */
+        .section-block { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        .section-block.am-block { border-top: 4px solid #007bff; }
+        .section-block.pm-block { border-top: 4px solid #9b59b6; }
+        
+        .section-title { font-size: 18px; font-weight: bold; color: #2c3e50; margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px; }
+        h2 { font-size: 14px; color: #555; margin: 15px 0 8px 0; border-left: 3px solid #cbd5e1; padding-left: 6px; }
+        h2.first-h2 { margin-top: 0; }
+
+        .btn-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-bottom: 10px; }
+        button { padding: 12px 4px; font-size: 13px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        
+        /* ボタンの色分け */
+        .btn-am-walkin { background-color: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9; }
+        .btn-pm-walkin { background-color: #f3e5f5; color: #4a148c; border: 1px solid #d1c4e9; }
+        .btn-reserve { background-color: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+        
+        button:disabled { background-color: #e0e0e0 !important; color: #9e9e9e !important; cursor: not-allowed; box-shadow: none; border-color: #ccc !important; }
+        
+        /* 誤発券取消エリア */
+        .cancel-zone { background: #fdf2f2; border: 1px solid #f5c6cb; padding: 15px; border-radius: 6px; margin-top: 10px; }
+        .cancel-zone h3 { margin: 0 0 10px 0; font-size: 14px; color: #721c24; }
+        .cancel-select { padding: 8px; font-size: 14px; width: 280px; margin-right: 10px; border-radius: 4px; border: 1px solid #ced4da; }
+        .btn-cancel-submit { background-color: #dc3545; color: white; padding: 8px 15px; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+    <h1>🏥 受付発券パネル</h1>
+    
+    <!-- ■■■ 午前診療ブロック ■■■ -->
+    <div class="section-block am-block">
+        <div class="section-title">☀️ 午前診療受付</div>
+        
+        <h2 class="first-h2">1. 当日受付 (1番 〜 20番)</h2>
+        <div class="btn-group" id="am-walkin-btns"></div>
+
+        <h2>2. 予約枠発券 (9:00 〜 11:30)</h2>
+        <div class="btn-group" id="am-reserve-btns"></div>
+    </div>
+
+    <!-- ■■■ 午後診療ブロック ■■■ -->
+    <div class="section-block pm-block">
+        <div class="section-title">🌙 午後診療受付 (2:00〜)</div>
+        
+        <h2 class="first-h2">1. 当日受付 (1番 〜 20番)</h2>
+        <div class="btn-group" id="pm-walkin-btns"></div>
+
+        <h2>2. 予約枠発券 (2:00 〜 5:30)</h2>
+        <div class="btn-group" id="pm-reserve-btns"></div>
+    </div>
+
+    <!-- 間違えて発券した場合の取消機能 -->
+    <div class="cancel-zone">
+        <h3>⚠️ 間違えて発券した場合の取り消し</h3>
+        <select id="cancel-select-box" class="cancel-select">
+            <option value="">-- 対象の番号/予約枠を選択 --</option>
+        </select>
+        <button class="btn-cancel-submit" onclick="submitCancel()">この発券を取り消す</button>
+    </div>
+
+    <script>
+        let patients = [];
+        const channel = new BroadcastChannel('clinic_sync_channel');
+
+        channel.onmessage = (event) => {
+            if (!event.data.requestData && !event.data.addFromReception && !event.data.cancelFromReception) {
+                patients = event.data;
+                updateButtonStates();
+                updateCancelSelect();
+            }
+        };
+
+        window.onload = function() {
+            initButtons();
+            channel.postMessage({requestData: true});
+        };
+
+        function addPatient(label, monitorLabel, type, btnId) {
+            const patient = {
+                id: 'p-' + Date.now() + Math.floor(Math.random()*100),
+                label: label, 
+                monitorLabel: monitorLabel, 
+                type: type, 
+                status: 'waiting', 
+                btnId: btnId
+            };
+            channel.postMessage({addFromReception: true, patient: patient});
+        }
+
+        function submitCancel() {
+            const selectBox = document.getElementById('cancel-select-box');
+            const targetId = selectBox.value;
+            if (!targetId) return alert('取り消す患者を選択してください。');
+            
+            if (confirm('この発券データを完全に削除してよろしいですか？')) {
+                channel.postMessage({cancelFromReception: true, patientId: targetId});
+                selectBox.value = "";
+            }
+        }
+
+        function updateButtonStates() {
+            const allButtons = document.querySelectorAll('.btn-group button');
+            allButtons.forEach(b => b.disabled = false);
+            patients.forEach(p => {
+                if (p.btnId) { const btn = document.getElementById(p.btnId); if(btn) btn.disabled = true; }
+            });
+        }
+
+        function updateCancelSelect() {
+            const selectBox = document.getElementById('cancel-select-box');
+            const currentValue = selectBox.value;
+            selectBox.innerHTML = '<option value="">-- 対象の番号/予約枠を選択 --</option>';
+            
+            patients.forEach(p => {
+                if (p.status !== 'completed') {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.label; // 管理パネル側と合わせるため識別用ラベルを使用
+                    selectBox.appendChild(opt);
+                }
+            });
+            selectBox.value = currentValue;
+        }
+
+        // 12時間表示用の時間配列を生成する関数
+        function generateSlots12H(startHour, startMin, endHour, endMin, isPM = false) {
+            const arr = [];
+            let c = new Date(); c.setHours(startHour, startMin, 0, 0);
+            let e = new Date(); e.setHours(endHour, endMin, 0, 0);
+            
+            while (c <= e) {
+                let hh = c.getHours();
+                // 12時間表示の指定（午後の14時以降を2時、3時に変換）
+                if (isPM && hh >= 12) {
+                    hh = hh - 12;
+                    if (hh === 0) hh = 12; // 12:00対応
+                }
+                const mm = String(c.getMinutes()).padStart(2, '0');
+                arr.push(`${hh}:${mm}`);
+                c.setMinutes(c.getMinutes() + 10);
+            }
+            return arr;
+        }
+
+        function initButtons() {
+            // 1. 午前当日 (1〜20) -> 表示文字は純粋な数字
+            const amWBox = document.getElementById('am-walkin-btns');
+            for (let i = 1; i <= 20; i++) {
+                const b = document.createElement('button'); b.className = 'btn-am-walkin'; b.id = `amwb-${i}`; b.textContent = `${i}番`;
+                // 管理用ラベルには「午前」を付与して重複を避ける、モニターには純粋な数字を渡す
+                b.onclick = () => addPatient(`午前 ${i}番`, `${i}番`, 'walkin', b.id); amWBox.appendChild(b);
+            }
+
+            // 2. 午前予約 (9:00〜11:30)
+            const amRBox = document.getElementById('am-reserve-btns');
+            const amSlots = generateSlots12H(9, 0, 11, 30, false);
+            amSlots.forEach((t, i) => {
+                const b = document.createElement('button'); b.className = 'btn-reserve'; b.id = `amb-${i}`; b.textContent = t;
+                b.onclick = () => addPatient(`午前 予約 ${t}の方`, `${t}の方`, 'reserve', b.id); amRBox.appendChild(b);
+            });
+
+            // 3. 午後当日 (1〜20) -> 表示文字は純粋な数字
+            const pmWBox = document.getElementById('pm-walkin-btns');
+            for (let i = 1; i <= 20; i++) {
+                const b = document.createElement('button'); b.className = 'btn-pm-walkin'; b.id = `pmwb-${i}`; b.textContent = `${i}番`;
+                b.onclick = () => addPatient(`午後 ${i}番`, `${i}番`, 'walkin', b.id); pmWBox.appendChild(b);
+            }
+
+            // 4. 午後予約 (14:00〜17:30 -> 12H表示で 2:00〜5:30)
+            const pmRBox = document.getElementById('pm-reserve-btns');
+            const pmSlots = generateSlots12H(14, 0, 17, 30, true);
+            pmSlots.forEach((t, i) => {
+                const b = document.createElement('button'); b.className = 'btn-reserve'; b.id = `pmb-${i}`; b.textContent = t;
+                b.onclick = () => addPatient(`午後 予約 ${t}の方`, `${t}の方`, 'reserve', b.id); pmRBox.appendChild(b);
+            });
+        }
+    </script>
+</body>
+</html>
