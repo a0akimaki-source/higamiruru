@@ -175,17 +175,8 @@ window.onload = function() {
     setInterval(loadPatients, 3000); 
 };
 
-// 画面を開いた時と、その後3秒ごとに自動でデータを読み込む
-window.onload = function() {
-    loadPatients();
-    setInterval(loadPatients, 3000); 
-};
 
-        window.onload = function() {
-            channel.postMessage({requestData: true});
-        };
-
-        function updateDOM(patients) {
+            function updateDOM(patients) {
             const mWait = document.getElementById('m-waiting');
             const mTest = document.getElementById('m-testing');
             const mCall = document.getElementById('m-calling');
