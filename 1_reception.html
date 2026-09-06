@@ -63,14 +63,15 @@
     <div class="cancel-zone">
         <h3>⚠️ 間違えて発券した場合の取り消し</h3>
         <select id="cancel-select-box" class="cancel-select">
-            <option value="">-- 対象の番号/予約枠を選択 --</option>
+            <option value="">-- 対象 of 番号/予約枠を選択 --</option>
         </select>
         <button class="btn-cancel-submit" onclick="submitCancel()">この発券を取り消す</button>
     </div>
 
-
     <script>
-        // 🌟【新システム対応】データの読み込みと保存を金庫（API）経由に書き換え
+        let patients = [];
+
+        // 🌟【新システム対応】データの読み込みと保存を金庫（API）経由に接続
         async function loadPatients() {
             try {
                 const response = await fetch('/api/sync');
@@ -102,7 +103,7 @@
         window.onload = function() {
             initButtons();
             loadPatients();
-            // 3秒ごとに他端末（管理画面など）での更新をチェックして画面を自動更新する
+            // 3秒ごとに他端末での更新をチェックして画面を自動更新
             setInterval(loadPatients, 3000);
         };
 
@@ -178,12 +179,14 @@
         }
 
         function initButtons() {
+            // 1. 午前当日 (1〜20)
             const amWBox = document.getElementById('am-walkin-btns');
             for (let i = 1; i <= 20; i++) {
                 const b = document.createElement('button'); b.className = 'btn-am-walkin'; b.id = `amwb-${i}`; b.textContent = `${i}番`;
                 b.onclick = () => addPatient(`午前 ${i}番`, `${i}番`, 'walkin', b.id); amWBox.appendChild(b);
             }
 
+            // 2. 午前予約 (9:00〜11:30)
             const amRBox = document.getElementById('am-reserve-btns');
             const amSlots = generateSlots12H(9, 0, 11, 30, false);
             amSlots.forEach((t, i) => {
@@ -191,11 +194,21 @@
                 b.onclick = () => addPatient(`午前 予約 ${t}の方`, `${t}の方`, 'reserve', b.id); amRBox.appendChild(b);
             });
 
+            // 3. 午後当日 (1〜20)
             const pmWBox = document.getElementById('pm-walkin-btns');
             for (let i = 1; i <= 20; i++) {
                 const b = document.createElement('button'); b.className = 'btn-pm-walkin'; b.id = `pmwb-${i}`; b.textContent = `${i}番`;
                 b.onclick = () => addPatient(`午後 ${i}番`, `${i}番`, 'walkin', b.id); pmWBox.appendChild(b);
             }
+
+            // 4. 午後予約 (14:00〜17:30 -> 12H表示で 2:00〜5:30)
+            const pmRBox = document.getElementById('pm-reserve-btns');
+            const pmSlots = generateSlots12H(14, 0, 17, 30, true);
+            pmSlots.forEach((t, i) => {
+                const b = document.createElement('button'); b.className = 'btn-reserve'; b.id = `pmb-${i}`; b.textContent = t;
+                b.onclick = () => addPatient(`午後 予約 ${t}の方`, `${t}の方`, 'reserve', b.id); pmRBox.appendChild(b);
+            });
+        }
     </script>
 </body>
 </html>
