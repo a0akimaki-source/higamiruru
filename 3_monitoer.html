@@ -2,244 +2,120 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>③ 待合室順番表示モニター (最新レイアウト確定版)</title>
+    <title>③ クリニック順番待ちモニター</title>
     <style>
-        body { 
-            font-family: 'Helvetica Neue', Arial, sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background-color: #2c3e50; 
-            color: white; 
-            height: 100vh; 
-            box-sizing: border-box; 
-            display: flex; 
-            gap: 20px;
-            overflow: hidden; 
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 20px; background-color: #f0f4f8; color: #333; }
+        h1 { font-size: 24px; color: #2c3e50; text-align: center; margin-bottom: 25px; border-bottom: 3px solid #28a745; padding-bottom: 10px; }
+        
+        .monitor-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .monitor-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; min-height: 400px; }
+        .box-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #edf2f7; display: flex; align-items: center; gap: 8px; }
+        
+        .waiting-box { border-top: 6px solid #007bff; }
+        .waiting-title { color: #007bff; }
+        .testing-box { border-top: 6px solid #e67e22; }
+        .testing-title { color: #e67e22; }
+        
+        .patient-list { list-style: none; padding: 0; margin: 0; }
+        .patient-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 22px; font-weight: bold; }
+        .item-calling { background-color: #fff3cd; border-color: #ffeeba; color: #856404; animation: blink 1.5s infinite; }
+        
+        .badge { display: inline-block; padding: 4px 10px; font-size: 14px; border-radius: 4px; color: white; margin-right: 10px; vertical-align: middle; }
+        .badge-walkin { background-color: #007bff; }
+        .badge-reserve { background-color: #28a745; }
+        
+        @keyframes blink {
+            0% { opacity: 1.0; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1.0; }
         }
         
-        h2 { 
-            color: white; 
-            border-bottom: 3px solid #1abc9c; 
-            font-size: 22px; 
-            padding-bottom: 8px; 
-            margin: 0 0 12px 0; 
-        }
-
-        .left-area {
-            flex: 1.1; 
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .right-area {
-            flex: 3;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            height: 100%;
-            min-height: 0; 
-        }
-
-        .monitor-col { 
-            background: rgba(255, 255, 255, 0.05); 
-            padding: 15px 20px; 
-            border-radius: 10px; 
-            box-sizing: border-box;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0; 
-        }
-        
-        /* 左側：メイン大型看板 */
-        .calling-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between; /* 上・中・下で綺麗に配置を分ける */
-            align-items: center;
-            text-align: center;
-            border-radius: 10px;
-            padding: 30px 20px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            box-sizing: border-box;
-            transition: all 0.3s ease;
-        }
-        .status-calling { background: #e74c3c; border-left: 15px solid #c0392b; }
-        .status-examining { background: #27ae60; border-left: 15px solid #1e8449; }
-        
-        /* ご要望：お呼び出しがない時は背景を抑えめに */
-        .no-calling {
-            background: rgba(255,255,255,0.02);
-            border-left: 15px solid #5d6d7e;
-        }
-
-        .calling-title { font-size: 26px; font-weight: bold; letter-spacing: 2px; }
-        
-        /* 午前午後を除去した純粋な「数字」の超巨大表示エリア */
-        .calling-box { 
-            font-size: 72px; /* さらに数字を巨大化 */
-            font-weight: bold; 
-            line-height: 1.2;
-            word-break: break-all;
-        }
-        
-        .calling-message {
-            font-size: 24px;
-            background: rgba(0,0,0,0.2);
-            padding: 10px 25px;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        
-        /* ご要望：「現在お呼び出しはありません」は一番下に小さく */
-        .calling-none-message {
-            font-size: 16px;
-            color: #a6acaf;
-            font-weight: normal;
-        }
-
-        /* 右側：グリッド */
-        .queue-grid { 
-            list-style: none; 
-            padding: 0; 
-            margin: 0; 
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            grid-template-rows: repeat(2, 1fr);    
-            gap: 10px; 
-            flex: 1;
-            min-height: 0;
-            align-content: start; 
-        }
-
-        .patient-card { 
-            padding: 10px 5px; 
-            border-radius: 6px; 
-            font-size: 18px; 
-            font-weight: bold; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            text-align: center;
-            color: white; 
-            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
-            box-sizing: border-box;
-            height: calc(100% - 5px); 
-        }
-        .walkin-card { background-color: #2980b9; border-bottom: 4px solid #1f618d; }
-        .reserve-card { background-color: #27ae60; border-bottom: 4px solid #1e8449; }
-        .badge { font-size: 11px; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.2); margin-right: 5px; vertical-align: middle; }
+        .empty-message { text-align: center; color: #a0aec0; padding: 5px 0; font-size: 16px; font-weight: normal; }
     </style>
 </head>
 <body>
 
-    <!-- 【左側】 案内大看板 -->
-    <div class="left-area">
-        <div id="calling-zone" class="calling-wrapper no-calling">
-            <div id="m-title" class="calling-title">順番表示案内</div>
-            <div id="m-calling" class="calling-box"><!-- 巨大数字 --></div>
-            <div id="m-msg" class="calling-message"><!-- メッセージ --></div>
-        </div>
-    </div>
+    <h1>🏥 診察順番ご案内</h1>
     
-    <!-- 【右側】 リスト上下 -->
-    <div class="right-area">
-        <div class="monitor-col">
-            <h2>お待ちの方（受付順）</h2>
-            <ul class="queue-grid" id="m-waiting"></ul>
+    <div class="monitor-container">
+        <!-- お待ちの方（受付順・呼出中） -->
+        <div class="monitor-box waiting-box">
+            <div class="box-title waiting-title">☀️ お待ちの方（受付順）</div>
+            <ul id="waiting-list" class="patient-list"></ul>
         </div>
-        <div class="monitor-col">
-            <h2>診察待ち（保留・検査中）</h2>
-            <ul class="queue-grid" id="m-testing"></ul>
+        
+        <!-- 診察待ち（保留・検査中） -->
+        <div class="monitor-box testing-box">
+            <div class="box-title testing-title">⏳ 診察待ち（保留・検査中）</div>
+            <ul id="testing-list" class="patient-list"></ul>
         </div>
     </div>
 
     <script>
-      // 🌟【データ同期化】サーバーの金庫から最新データを自動で読み込む処理
-async function loadPatients() {
-    try {
-        const response = await fetch('/api/sync');
-        if (response.status === 401) return; // 認証エラー時は中断
-        const data = await response.json();
-        patients = data || [];
-        updateDOM(); // 画面を更新する既存の関数
-    } catch (e) {
-        console.error("データ同期エラー:", e);
-    }
-}
+        let patients = [];
 
-// 画面を開いた時と、その後3秒ごとに自動でデータを最新にする
-window.onload = function() {
-    loadPatients();
-    setInterval(loadPatients, 3000); 
-};
-
-
-            function updateDOM(patients) {
-            const mWait = document.getElementById('m-waiting');
-            const mTest = document.getElementById('m-testing');
-            const mCall = document.getElementById('m-calling');
-            const mMsg = document.getElementById('m-msg');
-            const mTitle = document.getElementById('m-title');
-            const callZone = document.getElementById('calling-zone');
-            
-            mWait.innerHTML = ''; 
-            mTest.innerHTML = ''; 
-
-            let activePatient = null;
-            let activeStatus = ''; 
-
-            const callingPatient = patients.find(p => p.status === 'calling');
-            const examiningPatient = patients.find(p => p.status === 'examining');
-
-            if (callingPatient) {
-                activePatient = callingPatient;
-                activeStatus = 'calling';
-            } else if (examiningPatient) {
-                activePatient = examiningPatient;
-                activeStatus = 'examining';
+        // 🌟【データ同期化】サーバーの金庫から最新データを自動で読み込む処理
+        async function loadPatients() {
+            try {
+                const response = await fetch('/api/sync');
+                if (response.status === 401) return; // 認証エラー時は中断
+                const data = await response.json();
+                patients = data || [];
+                updateDOM(); // 画面の表示をリフレッシュする
+            } catch (e) {
+                console.error("データ同期エラー:", e);
             }
+        }
 
-            patients.forEach(p => {
-                const isW = p.type === 'walkin';
-                const badge = `<span class="badge">${isW ? '当日' : '予約'}</span>`;
-                // 右側のグリッド内カードも「午前・午後」を除去して見やすく
-                const cardHTML = `<div class="patient-card ${isW ? 'walkin-card' : 'reserve-card'}"><div>${badge}${p.monitorLabel}</div></div>`;
+        // 画面を開いた時と、その後3秒ごとに自動でデータを最新にする
+        window.onload = function() {
+            loadPatients();
+            setInterval(loadPatients, 3000); 
+        };
 
-                if (p.status === 'waiting') {
-                    const li = document.createElement('li'); li.innerHTML = cardHTML; mWait.appendChild(li);
-                } else if (p.status === 'testing') {
-                    const li = document.createElement('li'); li.innerHTML = cardHTML; mTest.appendChild(li);
-                }
-            });
-
-            // メイン案内看板の更新
-            if (activePatient) {
-                const isW = activePatient.type === 'walkin';
-                const badge = `<span class="badge">${isW ? '当日' : '予約'}</span>`;
-
-                // 「monitorLabel」を使うことで午前/午後の文字を削り、純粋な数字や予約時間だけにします
-                mCall.innerHTML = `${badge}<br><span style="font-size:76px; display:inline-block; margin-top:10px;">${activePatient.monitorLabel}</span>`;
-                
-                if (activeStatus === 'calling') {
-                    callZone.className = "calling-wrapper status-calling";
-                    mTitle.innerHTML = "只今お呼び出し中";
-                    mMsg.className = "calling-message";
-                    mMsg.innerHTML = "診察室の前の席でお待ちください";
-                } else {
-                    callZone.className = "calling-wrapper status-examining";
-                    mTitle.innerHTML = "只今診察中";
-                    mMsg.className = "calling-message";
-                    mMsg.innerHTML = "ただいま診察中です";
-                }
+        function updateDOM() {
+            const waitingList = document.getElementById('waiting-list');
+            const testingList = document.getElementById('testing-list');
+            
+            waitingList.innerHTML = '';
+            testingList.innerHTML = '';
+            
+            // 完了(completed)以外の患者を抽出
+            const activePatients = patients.filter(p => p.status !== 'completed');
+            
+            // 1. お待ちの方（waiting または calling の状態）
+            const waiters = activePatients.filter(p => p.status === 'waiting' || p.status === 'calling');
+            if (waiters.length === 0) {
+                waitingList.innerHTML = '<li class="empty-message">ただいまお待ちの方はいません</li>';
             } else {
-                // 【ご要望】誰も選択されていないときは、下部に小さく表示
-                callZone.className = "calling-wrapper no-calling";
-                mTitle.innerHTML = "順番案内";
-                mCall.innerHTML = `<span style="font-size:24px; color:#7f8c8d;">診察のご案内</span>`;
-                mMsg.className = "calling-none-message"; // 下部用の小さいスタイルに変更
-                mMsg.innerHTML = "現在お呼び出しはありません";
+                waiters.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'patient-item';
+                    if (p.status === 'calling') li.className += ' item-calling';
+                    
+                    const badgeText = p.type === 'walkin' ? '当日' : '予約';
+                    const badgeClass = p.type === 'walkin' ? 'badge-walkin' : 'badge-reserve';
+                    
+                    li.innerHTML = `<div><span class="badge ${badgeClass}">${badgeText}</span>${p.monitorLabel}</div>`;
+                    waitingList.appendChild(li);
+                });
+            }
+            
+            // 2. 診察待ち（testing または examining の状態）
+            const testers = activePatients.filter(p => p.status === 'testing' || p.status === 'examining');
+            if (testers.length === 0) {
+                testingList.innerHTML = '<li class="empty-message">ただいま対象の方はいません</li>';
+            } else {
+                testers.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'patient-item';
+                    
+                    const badgeText = p.type === 'walkin' ? '当日' : '予約';
+                    const badgeClass = p.type === 'walkin' ? 'badge-walkin' : 'badge-reserve';
+                    
+                    li.innerHTML = `<div><span class="badge ${badgeClass}">${badgeText}</span>${p.monitorLabel}</div>`;
+                    testingList.appendChild(li);
+                });
             }
         }
     </script>
