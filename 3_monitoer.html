@@ -156,21 +156,24 @@
     </div>
 
     <script>
-       // 🌟【新システム対応】サーバーから最新データを自動で取ってくる処理
+      // 🌟【データ同期化】サーバーの金庫から最新データを自動で読み込む処理
 async function loadPatients() {
     try {
         const response = await fetch('/api/sync');
-        if (response.status === 401) {
-            // パスワードが間違っているか未入力の場合
-            return;
-        }
+        if (response.status === 401) return; // 認証エラー時は中断
         const data = await response.json();
         patients = data || [];
-        updateDOM(); // 画面を更新する関数（既存のもの）
+        updateDOM(); // 画面を更新する既存の関数
     } catch (e) {
         console.error("データ同期エラー:", e);
     }
 }
+
+// 画面を開いた時と、その後3秒ごとに自動でデータを最新にする
+window.onload = function() {
+    loadPatients();
+    setInterval(loadPatients, 3000); 
+};
 
 // 画面を開いた時と、その後3秒ごとに自動でデータを読み込む
 window.onload = function() {
