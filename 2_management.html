@@ -87,111 +87,52 @@
     </div>
 
     <script>
-        let patients = [];
-        const channel = new BroadcastChannel('clinic_sync_channel');
-
-        // 時間取得用ヘルパー (時刻を12時間表示形式の文字列にする)
-        function getNowHHMM12H() {
-            const now = new Date();
-            let hh = now.getHours();
-            if (hh >= 12) {
-                hh = hh - 12;
-                if (hh === 0) hh = 12;
+        // 🌟【新システム対応】管理パネルのデータ保存・読み込みを金庫に接続
+        async function loadPatients() {
+            try {
+                const response = await fetch('/api/sync');
+                if (response.status === 401) return;
+                const data = await response.json();
+                patients = data || [];
+                updateDOM();
+            } catch (e) {
+                console.error("データ同期エラー:", e);
             }
-            return `${hh}:${String(now.getMinutes()).padStart(2, '0')}`;
         }
-       channel.onmessage = (event) => {
-            if (event.data.addFromReception) {
-                const newPatient = event.data.patient;
-                newPatient.regTime = getNowHHMM12H();
-                newPatient.regTimestamp = Date.now(); // 平均時間計算用のタイムスタンプ
-                newPatient.compTime = '---';
-                patients.push(newPatient);
-                saveAndSync();
-            } 
-            else if (event.data.cancelFromReception) {
-                patients = patients.filter(p => p.id !== event.data.patientId);
-                saveAndSync();
+
+        async function saveAndSync(newPatients) {
+            try {
+                await fetch('/api/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newPatients)
+                });
+                patients = newPatients;
+                updateDOM();
+            } catch (e) {
+                console.error("データ保存エラー:", e);
             }
-            else if (event.data.requestData) {
-                channel.postMessage(patients);
-            }
+        }
+
+        window.onload = function() {
+            loadPatients();
+            // 3秒ごとに受付画面からの追加を自動チェックして反映
+            setInterval(loadPatients, 3000);
         };
 
-        function setStatus(id, targetStatus) {
-            if (targetStatus === 'calling') {
-                patients.forEach(p => { if (p.status === 'calling') p.status = 'testing'; });
-            }
+        async function setStatus(id, newStatus) {
+            await loadPatients(); // 他で更新された最新データを一度取り込む
             
-            if (targetStatus === 'examining') {
-                patients.forEach(p => { if (p.status === 'examining') p.status = 'testing'; });
-            }
-
-            const p = patients.find(p => p.id === id);
-            if (p) {
-                p.status = targetStatus;
-                if (targetStatus === 'completed') {
-                    p.compTime = getNowHHMM12H();
-                    p.compTimestamp = Date.now(); // 完了時のタイムスタンプ
-                } else {
-                    p.compTime = '---';
-                    delete p.compTimestamp;
-                }
-                saveAndSync();
-            }
-        }
-
-        // 1日の業務終了プロセス（集計と自動クリア）
-        function endDayProcess() {
-            if (patients.length === 0) {
-                alert('集計する患者データがありません。');
-                return;
-            }
-
-            const activeCount = patients.filter(p => p.status !== 'completed').length;
-            if (activeCount > 0) {
-                if (!confirm(`まだ診察・会計が完了していない患者様が ${activeCount} 名います。\nこのまま無理やり終了して集計しますか？`)) {
-                    return;
-                }
-            }
-
-            if (confirm('本日の業務を終了し、データを集計して画面をクリアします。よろしいですか？')) {
-                const totalCount = patients.length;
-                let totalDurationMinutes = 0;
-                let completedCount = 0;
-
-                patients.forEach(p => {
-                    if (p.regTimestamp && p.compTimestamp) {
-                        const diffMs = p.compTimestamp - p.regTimestamp;
-                        const diffMins = Math.round(diffMs / 1000 / 60);
-                        totalDurationMinutes += diffMins;
-                        completedCount++;
+            patients = patients.map(p => {
+                if (p.id === id) {
+                    p.status = newStatus;
+                    if (newStatus === 'completed') {
+                        p.compTime = new Date().toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'});
                     }
-                });
-
-                const averageTime = completedCount > 0 ? Math.round(totalDurationMinutes / completedCount) : 0;
-                
-                const logZone = document.getElementById('summary-log-zone');
-                const textZone = document.getElementById('summary-text');
-                const today = new Date().toLocaleDateString('ja-JP');
-                
-                textZone.innerHTML = `
-                    <strong>実施日:</strong> ${today} <br>
-                    <strong>① 本日の総受付患者数:</strong> ${totalCount} 名 <br>
-                    <strong>② 患者1人あたりの平均所要時間 (受付～完了):</strong> ${averageTime} 分
-                `;
-                logZone.style.display = 'block';
-
-                patients = [];
-                saveAndSync();
-                
-                alert('本日の集計が完了し、台帳と発券ボタンがリセットされました。');
-            }
-        }
-
-        function saveAndSync() {
-            channel.postMessage(patients);
-            updateDOM();
+                }
+                return p;
+            });
+            await saveAndSync(patients);
         }
 
         function updateDOM() {
@@ -232,7 +173,7 @@
                             <button class="status-toggle ${cpClass}" onclick="setStatus('${p.id}', 'completed')">完了</button>
                         </div>
                     </td>
-                    <td class="time-label" style="font-weight: bold;">${p.compTime}</td>
+                    <td class="time-label" style="font-weight: bold;">${p.compTime || '---'}</td>
                 `;
                 tbody.appendChild(tr);
             });
