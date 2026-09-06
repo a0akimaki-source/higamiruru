@@ -4,33 +4,56 @@
     <meta charset="UTF-8">
     <title>③ クリニック順番待ちモニター</title>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 20px; background-color: #f0f4f8; color: #333; }
-        h1 { font-size: 24px; color: #2c3e50; text-align: center; margin-bottom: 25px; border-bottom: 3px solid #28a745; padding-bottom: 10px; }
+        /* 🌟 背景色を明るく爽やかなホワイト・薄いブルー系に刷新 */
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 30px; background-color: #f7fafc; color: #1a202c; }
         
-        .monitor-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .monitor-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; min-height: 400px; }
-        .box-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #edf2f7; display: flex; align-items: center; gap: 8px; }
+        /* 🌟 タイトルを大きく、見やすく */
+        h1 { font-size: 42px; color: #2c3e50; text-align: center; margin-bottom: 35px; border-bottom: 5px solid #28a745; padding-bottom: 15px; font-weight: 900; }
         
-        .waiting-box { border-top: 6px solid #007bff; }
+        .monitor-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        
+        /* 🌟 各ボックスの余白を広げ、大画面で見栄えがするように調整 */
+        .monitor-box { background: white; padding: 35px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); border: 2px solid #e2e8f0; min-height: 650px; }
+        
+        /* 🌟 エリアの見出しを特大サイズに（20px ➔ 32px） */
+        .box-title { font-size: 32px; font-weight: bold; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 3px solid #edf2f7; display: flex; align-items: center; gap: 12px; }
+        
+        .waiting-box { border-top: 10px solid #007bff; background-color: #ffffff; }
         .waiting-title { color: #007bff; }
-        .testing-box { border-top: 6px solid #e67e22; }
-        .testing-title { color: #e67e22; }
+        .active-box { border-top: 10px solid #e74c3c; background-color: #ffffff; }
+        .active-title { color: #e74c3c; }
+        
+        .sub-section { margin-bottom: 40px; }
+        
+        /* 🌟 各ブロックのタイトルも大幅拡大（16px ➔ 26px） */
+        .sub-title { font-size: 26px; font-weight: bold; color: #4a5568; margin-bottom: 15px; padding-left: 12px; }
+        .sub-title.calling { border-left: 6px solid #f1c40f; color: #b7950b; }
+        .sub-title.examining { border-left: 6px solid #e74c3c; color: #c0392b; }
+        .sub-title.testing { border-left: 6px solid #e67e22; color: #d35400; }
         
         .patient-list { list-style: none; padding: 0; margin: 0; }
-        .patient-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 22px; font-weight: bold; }
-        .item-calling { background-color: #fff3cd; border-color: #ffeeba; color: #856404; animation: blink 1.5s infinite; }
         
-        .badge { display: inline-block; padding: 4px 10px; font-size: 14px; border-radius: 4px; color: white; margin-right: 10px; vertical-align: middle; }
+        /* 🌟 患者番号・予約時間の表示サイズを2倍以上に巨大化（22px ➔ 45px） */
+        .patient-item { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; margin-bottom: 15px; background: #f8fafc; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 45px; font-weight: 900; color: #1a202c; }
+        
+        /* 🌟 呼出中（特大かつ鮮やかに点滅、文字サイズ 55px） */
+        .item-calling { background-color: #fffbeb; border-color: #f1c40f; color: #92400e; animation: blink 1.2s infinite; font-size: 55px; padding: 25px 30px; }
+        /* 🌟 診察中 */
+        .item-examining { background-color: #fdf2f2; border-color: #f8b4b4; color: #741b1b; }
+        
+        /* 🌟 当日・予約のバッジも一回り大きく見やすく調整 */
+        .badge { display: inline-block; padding: 6px 16px; font-size: 22px; font-weight: bold; border-radius: 8px; color: white; margin-right: 20px; vertical-align: middle; }
         .badge-walkin { background-color: #007bff; }
         .badge-reserve { background-color: #28a745; }
         
         @keyframes blink {
-            0% { opacity: 1.0; }
-            50% { opacity: 0.4; }
-            100% { opacity: 1.0; }
+            0% { opacity: 1.0; background-color: #fff3cd; }
+            50% { opacity: 0.6; background-color: #fcf3cf; }
+            100% { opacity: 1.0; background-color: #fff3cd; }
         }
         
-        .empty-message { text-align: center; color: #a0aec0; padding: 5px 0; font-size: 16px; font-weight: normal; }
+        /* 🌟 空白時の文字サイズも調整 */
+        .empty-message { text-align: center; color: #a0aec0; padding: 25px 0; font-size: 24px; font-weight: normal; list-style: none; border: 2px dashed #e2e8f0; border-radius: 12px; }
     </style>
 </head>
 <body>
@@ -38,84 +61,110 @@
     <h1>🏥 診察順番ご案内</h1>
     
     <div class="monitor-container">
-        <!-- お待ちの方（受付順・呼出中） -->
+        <!-- 👥 左側：お待ちの方 -->
         <div class="monitor-box waiting-box">
             <div class="box-title waiting-title">☀️ お待ちの方（受付順）</div>
             <ul id="waiting-list" class="patient-list"></ul>
         </div>
         
-        <!-- 診察待ち（保留・検査中） -->
-        <div class="monitor-box testing-box">
-            <div class="box-title testing-title">⏳ 診察待ち（保留・検査中）</div>
-            <ul id="testing-list" class="patient-list"></ul>
+        <!-- 📢 右側：現在の状況 -->
+        <div class="monitor-box active-box">
+            <div class="box-title active-title">🔔 現在の診察状況</div>
+            
+            <!-- ① 呼出中エリア -->
+            <div class="sub-section">
+                <div class="sub-title calling">📢 呼び出し中</div>
+                <ul id="calling-list" class="patient-list"></ul>
+            </div>
+            
+            <!-- ② 診察中エリア -->
+            <div class="sub-section">
+                <div class="sub-title examining">🩺 診察中</div>
+                <ul id="examining-list" class="patient-list"></ul>
+            </div>
+            
+            <!-- ③ 保留・検査中エリア -->
+            <div class="sub-section">
+                <div class="sub-title testing">⏳ 診察待ち（保留・検査中）</div>
+                <ul id="testing-list" class="patient-list"></ul>
+            </div>
         </div>
     </div>
 
     <script>
         let patients = [];
 
-        // 🌟【データ同期化】サーバーの金庫から最新データを自動で読み込む処理
+        // 🌟 サーバーの金庫から最新データを自動で読み込む処理
         async function loadPatients() {
             try {
                 const response = await fetch('/api/sync');
-                if (response.status === 401) return; // 認証エラー時は中断
+                if (response.status === 401) return;
                 const data = await response.json();
                 patients = data || [];
-                updateDOM(); // 画面の表示をリフレッシュする
+                updateDOM();
             } catch (e) {
                 console.error("データ同期エラー:", e);
             }
         }
 
-        // 画面を開いた時と、その後3秒ごとに自動でデータを最新にする
         window.onload = function() {
             loadPatients();
-            setInterval(loadPatients, 3000); 
+            setInterval(loadPatients, 3000); // 3秒ごとに最新データに更新
         };
+
+        // 各患者のHTML要素（リストアイテム）を作る共通関数
+        function createPatientLi(p, extraClass = '') {
+            const li = document.createElement('li');
+            li.className = 'patient-item ' + extraClass;
+            const badgeText = p.type === 'walkin' ? '当日' : '予約';
+            const badgeClass = p.type === 'walkin' ? 'badge-walkin' : 'badge-reserve';
+            li.innerHTML = `<div><span class="badge ${badgeClass}">${badgeText}</span>${p.monitorLabel}</div>`;
+            return li;
+        }
 
         function updateDOM() {
             const waitingList = document.getElementById('waiting-list');
+            const callingList = document.getElementById('calling-list');
+            const examiningList = document.getElementById('examining-list');
             const testingList = document.getElementById('testing-list');
             
             waitingList.innerHTML = '';
+            callingList.innerHTML = '';
+            examiningList.innerHTML = '';
             testingList.innerHTML = '';
             
-            // 完了(completed)以外の患者を抽出
             const activePatients = patients.filter(p => p.status !== 'completed');
             
-            // 1. お待ちの方（waiting または calling の状態）
-            const waiters = activePatients.filter(p => p.status === 'waiting' || p.status === 'calling');
+            // 1. お待ちの方
+            const waiters = activePatients.filter(p => p.status === 'waiting');
             if (waiters.length === 0) {
                 waitingList.innerHTML = '<li class="empty-message">ただいまお待ちの方はいません</li>';
             } else {
-                waiters.forEach(p => {
-                    const li = document.createElement('li');
-                    li.className = 'patient-item';
-                    if (p.status === 'calling') li.className += ' item-calling';
-                    
-                    const badgeText = p.type === 'walkin' ? '当日' : '予約';
-                    const badgeClass = p.type === 'walkin' ? 'badge-walkin' : 'badge-reserve';
-                    
-                    li.innerHTML = `<div><span class="badge ${badgeClass}">${badgeText}</span>${p.monitorLabel}</div>`;
-                    waitingList.appendChild(li);
-                });
+                waiters.forEach(p => waitingList.appendChild(createPatientLi(p)));
             }
             
-            // 2. 診察待ち（testing または examining の状態）
-            const testers = activePatients.filter(p => p.status === 'testing' || p.status === 'examining');
-            if (testers.length === 0) {
-                testingList.innerHTML = '<li class="empty-message">ただいま対象の方はいません</li>';
+            // 2. 呼び出し中
+            const callers = activePatients.filter(p => p.status === 'calling');
+            if (callers.length === 0) {
+                callingList.innerHTML = '<li class="empty-message">ただいま呼び出し中の方はいません</li>';
             } else {
-                testers.forEach(p => {
-                    const li = document.createElement('li');
-                    li.className = 'patient-item';
-                    
-                    const badgeText = p.type === 'walkin' ? '当日' : '予約';
-                    const badgeClass = p.type === 'walkin' ? 'badge-walkin' : 'badge-reserve';
-                    
-                    li.innerHTML = `<div><span class="badge ${badgeClass}">${badgeText}</span>${p.monitorLabel}</div>`;
-                    testingList.appendChild(li);
-                });
+                callers.forEach(p => callingList.appendChild(createPatientLi(p, 'item-calling')));
+            }
+            
+            // 3. 診察中
+            const examiners = activePatients.filter(p => p.status === 'examining');
+            if (examiners.length === 0) {
+                examiningList.innerHTML = '<li class="empty-message">--</li>';
+            } else {
+                examiners.forEach(p => examiningList.appendChild(createPatientLi(p, 'item-examining')));
+            }
+            
+            // 4. 保留・検査中
+            const testers = activePatients.filter(p => p.status === 'testing');
+            if (testers.length === 0) {
+                testingList.innerHTML = '<li class="empty-message">--</li>';
+            } else {
+                testers.forEach(p => testingList.appendChild(createPatientLi(p)));
             }
         }
     </script>
