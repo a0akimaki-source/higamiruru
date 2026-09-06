@@ -69,41 +69,66 @@
     </div>
 
     <script>
-        let patients = [];
-        const channel = new BroadcastChannel('clinic_sync_channel');
-
-        channel.onmessage = (event) => {
-            if (!event.data.requestData && !event.data.addFromReception && !event.data.cancelFromReception) {
-                patients = event.data;
+        // 🌟【新システム対応】データの読み込みと保存を金庫（API）経由に書き換え
+        async function loadPatients() {
+            try {
+                const response = await fetch('/api/sync');
+                if (response.status === 401) return;
+                const data = await response.json();
+                patients = data || [];
                 updateButtonStates();
                 updateCancelSelect();
+            } catch (e) {
+                console.error("データ同期エラー:", e);
             }
-        };
+        }
+
+        async function savePatients(newPatients) {
+            try {
+                await fetch('/api/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newPatients)
+                });
+                patients = newPatients;
+                updateButtonStates();
+                updateCancelSelect();
+            } catch (e) {
+                console.error("データ保存エラー:", e);
+            }
+        }
 
         window.onload = function() {
             initButtons();
-            channel.postMessage({requestData: true});
+            loadPatients();
+            // 3秒ごとに他端末（管理画面など）での更新をチェックして画面を自動更新する
+            setInterval(loadPatients, 3000);
         };
 
-        function addPatient(label, monitorLabel, type, btnId) {
+        async function addPatient(label, monitorLabel, type, btnId) {
+            await loadPatients(); // 最新データを取得してから追加（衝突防止）
             const patient = {
                 id: 'p-' + Date.now() + Math.floor(Math.random()*100),
                 label: label, 
                 monitorLabel: monitorLabel, 
                 type: type, 
                 status: 'waiting', 
-                btnId: btnId
+                btnId: btnId,
+                regTime: new Date().toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'})
             };
-            channel.postMessage({addFromReception: true, patient: patient});
+            const updated = [...patients, patient];
+            await savePatients(updated);
         }
 
-        function submitCancel() {
+        async function submitCancel() {
             const selectBox = document.getElementById('cancel-select-box');
             const targetId = selectBox.value;
             if (!targetId) return alert('取り消す患者を選択してください。');
             
             if (confirm('この発券データを完全に削除してよろしいですか？')) {
-                channel.postMessage({cancelFromReception: true, patientId: targetId});
+                await loadPatients();
+                const updated = patients.filter(p => p.id !== targetId);
+                await savePatients(updated);
                 selectBox.value = "";
             }
         }
@@ -125,7 +150,7 @@
                 if (p.status !== 'completed') {
                     const opt = document.createElement('option');
                     opt.value = p.id;
-                    opt.textContent = p.label; // 管理パネル側と合わせるため識別用ラベルを使用
+                    opt.textContent = p.label;
                     selectBox.appendChild(opt);
                 }
             });
@@ -140,10 +165,9 @@
             
             while (c <= e) {
                 let hh = c.getHours();
-                // 12時間表示の指定（午後の14時以降を2時、3時に変換）
                 if (isPM && hh >= 12) {
                     hh = hh - 12;
-                    if (hh === 0) hh = 12; // 12:00対応
+                    if (hh === 0) hh = 12;
                 }
                 const mm = String(c.getMinutes()).padStart(2, '0');
                 arr.push(`${hh}:${mm}`);
@@ -153,15 +177,12 @@
         }
 
         function initButtons() {
-            // 1. 午前当日 (1〜20) -> 表示文字は純粋な数字
             const amWBox = document.getElementById('am-walkin-btns');
             for (let i = 1; i <= 20; i++) {
                 const b = document.createElement('button'); b.className = 'btn-am-walkin'; b.id = `amwb-${i}`; b.textContent = `${i}番`;
-                // 管理用ラベルには「午前」を付与して重複を避ける、モニターには純粋な数字を渡す
                 b.onclick = () => addPatient(`午前 ${i}番`, `${i}番`, 'walkin', b.id); amWBox.appendChild(b);
             }
 
-            // 2. 午前予約 (9:00〜11:30)
             const amRBox = document.getElementById('am-reserve-btns');
             const amSlots = generateSlots12H(9, 0, 11, 30, false);
             amSlots.forEach((t, i) => {
@@ -169,21 +190,11 @@
                 b.onclick = () => addPatient(`午前 予約 ${t}の方`, `${t}の方`, 'reserve', b.id); amRBox.appendChild(b);
             });
 
-            // 3. 午後当日 (1〜20) -> 表示文字は純粋な数字
             const pmWBox = document.getElementById('pm-walkin-btns');
             for (let i = 1; i <= 20; i++) {
                 const b = document.createElement('button'); b.className = 'btn-pm-walkin'; b.id = `pmwb-${i}`; b.textContent = `${i}番`;
                 b.onclick = () => addPatient(`午後 ${i}番`, `${i}番`, 'walkin', b.id); pmWBox.appendChild(b);
             }
-
-            // 4. 午後予約 (14:00〜17:30 -> 12H表示で 2:00〜5:30)
-            const pmRBox = document.getElementById('pm-reserve-btns');
-            const pmSlots = generateSlots12H(14, 0, 17, 30, true);
-            pmSlots.forEach((t, i) => {
-                const b = document.createElement('button'); b.className = 'btn-reserve'; b.id = `pmb-${i}`; b.textContent = t;
-                b.onclick = () => addPatient(`午後 予約 ${t}の方`, `${t}の方`, 'reserve', b.id); pmRBox.appendChild(b);
-            });
-        }
     </script>
 </body>
 </html>
