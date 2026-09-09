@@ -4,45 +4,45 @@
     <meta charset="UTF-8">
     <title>③ クリニック順番待ちモニター</title>
     <style>
-        /* 全体の基本設定（画面からはみ出さないようスクロールを許可） */
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 20px; background-color: #f7fafc; color: #1a202c; }
+        /* 🌟 画面からはみ出さないよう100%に固定（スクロールバーを完全に消去） */
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 15px; background-color: #f7fafc; color: #1a202c; overflow: hidden; height: calc(100vh - 30px); box-sizing: border-box; }
         
-        /* 画面全体を「左3/4（受付順・保留）」と「右1/4（呼び出し・診察中）」に分割 */
-        .main-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 20px; min-height: calc(100vh - 40px); }
+        /* 画面全体を「左3/4」と「右1/4」に分割 */
+        .main-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 15px; height: 100%; }
         
         /* 共通のボックスデザイン */
-        .monitor-box { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 2px solid #e2e8f0; display: flex; flex-direction: column; }
-        .box-title { font-size: 30px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #edf2f7; display: flex; align-items: center; gap: 10px; }
+        .monitor-box { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 2px solid #e2e8f0; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
+        .box-title { font-size: 28px; font-weight: bold; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 3px solid #edf2f7; display: flex; align-items: center; gap: 10px; }
         
-        /* 左側エリア（3/4幅）：上下2段構成 */
-        .left-column { display: grid; grid-template-rows: 1fr 1fr; gap: 20px; }
-        .waiting-box { border-top: 10px solid #007bff; }
+        /* 🧩 左側エリア：上下2段構成（高さを均等に100%に収める） */
+        .left-column { display: grid; grid-template-rows: 1fr 1fr; gap: 15px; height: 100%; }
+        .waiting-box { border-top: 8px solid #007bff; }
         .waiting-title { color: #007bff; }
-        .testing-box { border-top: 10px solid #e67e22; }
+        .testing-box { border-top: 8px solid #e67e22; }
         .testing-title { color: #e67e22; }
         
-        /* 🌟 必ず左詰めで上から順に並ぶようにグリッドルールを最適化（はみ出し対策） */
-        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; flex-grow: 1; align-content: start; justify-content: start; }
+        /* 🌟 必ず左詰めで上から順に並ぶようにグリッドルールを最適化 */
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; flex-grow: 1; align-content: start; justify-content: start; }
         
-        /* 🌟 マスの高さを固定値から可変（min-height）に変更し、隠れるのを防止 */
-        .grid-item { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px 10px; font-size: 34px; font-weight: 900; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); min-height: 90px; box-sizing: border-box; }
-        .grid-item .badge { font-size: 16px; padding: 2px 8px; border-radius: 4px; color: white; margin-bottom: 5px; font-weight: bold; }
+        /* 🌟 表示幅・縦幅をスリム（コンパクト）に調整し、大画面でも隠れないように変更 */
+        .grid-item { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 5px; font-size: 32px; font-weight: 900; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); height: 80px; box-sizing: border-box; }
+        .grid-item .badge { font-size: 14px; padding: 2px 6px; border-radius: 4px; color: white; margin-bottom: 2px; font-weight: bold; }
         
         /* 右側エリア（1/4幅）：呼び出し中・診察中 */
-        .right-column { border-top: 10px solid #e74c3c; }
+        .right-column { border-top: 8px solid #e74c3c; }
         .active-title { color: #e74c3c; }
         
-        .right-section { flex-grow: 1; display: grid; grid-template-rows: 1.2fr 1fr; gap: 20px; }
-        .sub-block { background: #fafafa; border: 2px solid #edf2f7; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .sub-label { font-size: 24px; font-weight: bold; color: #4a5568; margin-bottom: 5px; }
+        .right-section { flex-grow: 1; display: grid; grid-template-rows: 1.2fr 1fr; gap: 15px; height: calc(100% - 50px); }
+        .sub-block { background: #fafafa; border: 2px solid #edf2f7; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; box-sizing: border-box; }
+        .sub-label { font-size: 22px; font-weight: bold; color: #4a5568; margin-bottom: 5px; }
         
-        /* 呼び出し中の番号（超特大 52px ＋ 点滅） */
-        .call-display { font-size: 52px; font-weight: 900; color: #92400e; background-color: #fffbeb; border: 3px solid #f1c40f; border-radius: 12px; width: 100%; padding: 15px 5px; animation: blink 1.2s infinite; box-sizing: border-box; }
-        /* 小さな案内文（20px） */
-        .call-subtext { font-size: 20px; color: #b45309; font-weight: bold; margin-top: 8px; }
+        /* 呼び出し中の番号（超特大 50px ＋ 点滅） */
+        .call-display { font-size: 50px; font-weight: 900; color: #92400e; background-color: #fffbeb; border: 3px solid #f1c40f; border-radius: 12px; width: 100%; padding: 10px 5px; animation: blink 1.2s infinite; box-sizing: border-box; }
+        /* 小さな案内文（18px） */
+        .call-subtext { font-size: 18px; color: #b45309; font-weight: bold; margin-top: 6px; }
         
-        /* 診察中の番号（超特大 48px） */
-        .exam-display { font-size: 48px; font-weight: 900; color: #741b1b; background-color: #fdf2f2; border: 3px solid #f8b4b4; border-radius: 12px; width: 100%; padding: 15px 5px; box-sizing: border-box; }
+        /* 診察中の番号（超特大 46px） */
+        .exam-display { font-size: 46px; font-weight: 900; color: #741b1b; background-color: #fdf2f2; border: 3px solid #f8b4b4; border-radius: 12px; width: 100%; padding: 10px 5px; box-sizing: border-box; }
         
         /* バッジの色分け */
         .badge-walkin { background-color: #007bff; }
@@ -54,8 +54,8 @@
             100% { opacity: 1.0; background-color: #fff3cd; }
         }
         
-        .empty-grid-text { grid-column: span 5; text-align: center; color: #a0aec0; font-size: 26px; padding-top: 50px; font-weight: normal; }
-        .none-text { font-size: 32px; color: #a0aec0; font-weight: normal; }
+        .empty-grid-text { grid-column: span 5; text-align: center; color: #a0aec0; font-size: 24px; padding-top: 30px; font-weight: normal; }
+        .none-text { font-size: 30px; color: #a0aec0; font-weight: normal; }
     </style>
 </head>
 <body>
@@ -123,7 +123,7 @@
             setInterval(loadPatients, 3000); // 3秒ごとに自動更新
         };
 
-        // 🌟【修正】「の方」をきれいに取り除く加工関数
+        // 「の方」をきれいに取り除く加工関数
         function cleanLabel(label) {
             if (!label) return '';
             return label.replace(/の方$/, '');
@@ -135,7 +135,6 @@
             div.className = 'grid-item';
             const badgeText = p.type === 'walkin' ? '当日' : '予約';
             const badgeClass = p.type === 'walkin' ? 'badge-walkin' : 'badge-reserve';
-            // 🌟 文字列の加工を適用
             div.innerHTML = `<span class="badge ${badgeClass}">${badgeText}</span>${cleanLabel(p.monitorLabel)}`;
             return div;
         }
@@ -178,7 +177,6 @@
                 callBox.className = 'call-display';
                 const p = callers[callers.length - 1];
                 const badgeText = p.type === 'walkin' ? '当日 ' : '予約 ';
-                // 🌟 「の方」を除去して表示
                 callBox.textContent = badgeText + cleanLabel(p.monitorLabel);
                 callMsg.textContent = '診察室の前の席でお待ちください';
             }
@@ -192,7 +190,6 @@
                 examBox.className = 'exam-display';
                 const p = examiners[examiners.length - 1];
                 const badgeText = p.type === 'walkin' ? '当日 ' : '予約 ';
-                // 🌟 「の方」を除去して表示
                 examBox.textContent = badgeText + cleanLabel(p.monitorLabel);
             }
         }
