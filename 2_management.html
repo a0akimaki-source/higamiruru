@@ -120,19 +120,19 @@
             setInterval(loadPatients, 3000);
         };
 
-        // 🌟【新システム・自動待機戻し対応】ステータス管理
+        // 🌟【自動保留戻し対応】ステータス管理
         async function setStatus(id, newStatus) {
             await loadPatients(); // 他で更新された最新データを一度取り込む
             
             patients = patients.map(p => {
-                // ① 新しく誰かが「呼び出し中」に設定された場合、他に「calling」だった人を「waiting」に戻す
+                // ① 新しく誰かが「呼び出し中」になった場合、前に「calling（呼び出し中）」だった人を「testing（保留・検査中）」に移す
                 if (newStatus === 'calling' && p.status === 'calling' && p.id !== id) {
-                    p.status = 'waiting';
+                    p.status = 'testing';
                 }
                 
-                // ② 新しく誰かが「診察中」に設定された場合、他に「examining」だった人を「waiting」に戻す
+                // ② 新しく誰かが「診察中」になった場合、前に「examining（診察中）」だった人を「testing（保留・検査中）」に移す
                 if (newStatus === 'examining' && p.status === 'examining' && p.id !== id) {
-                    p.status = 'waiting';
+                    p.status = 'testing';
                 }
 
                 // 対象の患者のステータスを変更
