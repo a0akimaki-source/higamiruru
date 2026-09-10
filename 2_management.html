@@ -19,9 +19,9 @@
         .btn-group { display: flex; gap: 6px; }
         .status-toggle { padding: 8px 14px; font-size: 13px; font-weight: bold; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer; transition: all 0.1s; }
         
-        /* ボタンのアクティブ状態の色分け */
+        /* 🌟【完全復元】前回の見やすくてはっきりしたステータスボタンの色合い */
         .active-waiting { background-color: #e0f2fe !important; color: #0369a1 !important; border-color: #7dd3fc !important; }
-        .active-calling { background-color: #fef3c7 !important; color: #b45309 !important; border-color: #fde68a !important; animation: sub-blink 1.5s infinite; }
+        .active-calling { background-color: #fef3c7 !important; color: #b45309 !important; border-color: #fde68a !important; }
         .active-testing { background-color: #ffedd5 !important; color: #c2410c !important; border-color: #fed7aa !important; }
         .active-examining { background-color: #fee2e2 !important; color: #b91c1c !important; border-color: #fca5a5 !important; }
         .active-completed { background-color: #f1f5f9 !important; color: #94a3b8 !important; border-color: #cbd5e1 !important; }
@@ -29,7 +29,7 @@
         .row-completed { background-color: #f8fafc; color: #94a3b8; }
         .time-label { color: #64748b; font-size: 13px; }
         
-        /* 🌟 集計終了ボタン用のスタイル */
+        /* 集計終了ボタン用のスタイル */
         .footer-zone { margin-top: 25px; display: flex; justify-content: flex-end; }
         .btn-end-day { background-color: #dc2626; color: white; border: none; padding: 15px 30px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2); }
         .btn-end-day:active { transform: scale(0.98); }
@@ -51,12 +51,11 @@
                 </tr>
             </thead>
             <tbody id="patient-table-body">
-                <!-- JavaScriptでここに患者データが並びます -->
+                <!-- JavaScriptでデータが並びます -->
             </tbody>
         </table>
     </div>
 
-    <!-- 🌟 一日の終わりに押す集計＆リセットボタン -->
     <div class="footer-zone">
         <button class="btn-end-day" onclick="endBusinessDay()">本日の業務を終了して集計する</button>
     </div>
@@ -92,10 +91,10 @@
 
         window.onload = function() {
             loadPatients();
-            setInterval(loadPatients, 3000); // 3秒ごとに自動チェック
+            setInterval(loadPatients, 3000); // 3秒自動更新
         };
 
-        // 自動保留戻しロジック搭載
+        // 自動保留戻しロジック ＆ 時間記録の修正
         async function setStatus(id, newStatus) {
             await loadPatients();
             
@@ -110,8 +109,8 @@
                 if (p.id === id) {
                     p.status = newStatus;
                     if (newStatus === 'completed') {
-                        // 完了時刻をミリ秒ベースで保存(集計用)と表示用テキストで保持
                         p.compTime = new Date().toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'});
+                        // 🌟 現在の完了時刻の正確なミリ秒タイムスタンプを保存
                         p.compTimestamp = Date.now();
                     }
                 }
@@ -120,7 +119,7 @@
             await saveAndSync(patients);
         }
 
-        // 🌟【新機能】業務終了・自動集計・データ一斉クリア処理
+        // 🌟【計算バグ修正】業務終了・正確な自動集計レポート処理
         async function endBusinessDay() {
             if (patients.length === 0) {
                 return alert("本日の受付データはまだありません。");
@@ -130,14 +129,12 @@
                 return;
             }
 
-            // 各種集計用の変数を準備
             let amWalkinCount = 0, amReserveCount = 0;
             let pmWalkinCount = 0, pmReserveCount = 0;
             let totalDurationMinutes = 0;
             let completedCount = 0;
 
             patients.forEach(p => {
-                // ① 午前・午後の人数カウント (ラベル内の「午前」「午後」の文字で判定)
                 const isAM = p.label.includes("午前");
                 if (p.type === "walkin") {
                     if (isAM) amWalkinCount++; else pmWalkinCount++;
@@ -145,24 +142,25 @@
                     if (isAM) amReserveCount++; else pmReserveCount++;
                 }
 
-                // ② 所要時間の計算（受付のID作成時タイムスタンプ ➔ 完了タイムスタンプの差分）
-                // 完了(completed)している患者のみ計算対象
+                // 🌟 受付番号が発行された正確なミリ秒（p.id の後ろにあるタイムスタンプ）を取り出して正しく引き算
                 if (p.status === "completed" && p.compTimestamp) {
-                    const idMillis = parseInt(p.id.split('-')[1]); // IDから受付時のミリ秒を抽出
-                    if (!isNaN(idMillis)) {
-                        const durationMinutes = (p.compTimestamp - idMillis) / 1000 / 60;
-                        totalDurationMinutes += durationMinutes;
-                        completedCount++;
+                    // 「p-1712345678901」のようなIDから、数字のタイムスタンプ部分だけを抽出
+                    const idParts = p.id.split('-');
+                    if (idParts.length > 1) {
+                        const startTimestamp = parseInt(idParts[1]); 
+                        if (!isNaN(startTimestamp) && p.compTimestamp > startTimestamp) {
+                            const durationMinutes = (p.compTimestamp - startTimestamp) / 1000 / 60;
+                            totalDurationMinutes += durationMinutes;
+                            completedCount++;
+                        }
                     }
                 }
             });
 
-            // 平均所要時間の算出
             const avgDurationText = completedCount > 0 
                 ? Math.round(totalDurationMinutes / completedCount) + " 分" 
                 : "--- (診察完了データなし)";
 
-            // 集計結果のレポート画面
             const reportMessage = `
 【📊 本日の診療集計レポート】
 
@@ -184,7 +182,7 @@
 
             alert(reportMessage);
 
-            // 🌟 サーバーの金庫を完全に空っぽ(空の配列)にして保存する
+            // サーバーの金庫を完全に空っぽにする
             await saveAndSync([]);
             alert("本日のデータをすべて消去しました。お疲れ様でした！");
         }
