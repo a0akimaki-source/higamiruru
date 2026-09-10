@@ -4,52 +4,42 @@
     <meta charset="UTF-8">
     <title>③ クリニック順番待ちモニター</title>
     <style>
-        /* 画面からはみ出さないよう100%に固定（スクロールバーを完全に消去） */
         body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 15px; background-color: #f7fafc; color: #1a202c; overflow: hidden; height: calc(100vh - 30px); box-sizing: border-box; }
-        
-        /* 画面全体を「左3/4」と「右1/4」に分割 */
         .main-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 15px; height: 100%; }
         
-        /* 共通のボックスデザイン */
         .monitor-box { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 2px solid #cbd5e1; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
         .box-title { font-size: 28px; font-weight: bold; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 3px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
         
-        /* 左側エリア：上下2段構成 */
         .left-column { display: grid; grid-template-rows: 1fr 1fr; gap: 15px; height: 100%; }
         .waiting-box { border-top: 8px solid #0056b3; }
         .waiting-title { color: #0056b3; }
         .testing-box { border-top: 8px solid #d35400; }
         .testing-title { color: #d35400; }
         
-        /* 必ず左詰めで上から順に並ぶようにグリッドルールを最適化 */
         .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; flex-grow: 1; align-content: start; justify-content: start; }
-        
-        /* 🌟 マスの背景色を濃く（#e2e8f0 ➔ #cbd5e1へ）して、文字をくっきりはっきりと変更 */
         .grid-item { background: #e2e8f0; border: 2px solid #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 5px; font-size: 34px; font-weight: 900; text-align: center; height: 85px; box-sizing: border-box; color: #0f172a; }
         .grid-item .badge { font-size: 15px; padding: 2px 8px; border-radius: 4px; color: white; margin-bottom: 4px; font-weight: bold; }
         
-        /* 右側エリア（1/4幅）：呼び出し中・診察中 */
         .right-column { border-top: 8px solid #c0392b; }
         .active-title { color: #c0392b; }
         
-        .right-section { flex-grow: 1; display: grid; grid-template-rows: 1.2fr 1fr; gap: 15px; height: calc(100% - 50px); }
-        .sub-block { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; box-sizing: border-box; }
+        /* 🌟 右側の並び幅を完璧に揃えるための100%幅指定 */
+        .right-section { flex-grow: 1; display: grid; grid-template-rows: 1.2fr 1fr; gap: 15px; height: calc(100% - 50px); width: 100%; }
+        .sub-block { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; box-sizing: border-box; width: 100%; }
         .sub-label { font-size: 24px; font-weight: bold; color: #334155; margin-bottom: 8px; }
         
-        /* 🌟 右側の表示も左側と同じルール（縦並び・上バッジ）に統一し、サイズを最大限拡大 */
-        .call-display { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #fef3c7; border: 4px solid #f59e0b; border-radius: 14px; width: 100%; padding: 15px 5px; animation: blink 1.2s infinite; box-sizing: border-box; min-height: 140px; }
+        /* 🌟 枠幅（width: 100%）と余白を統一し、左右でガタつかないように設定 */
+        .call-display { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #fef3c7; border: 4px solid #f59e0b; border-radius: 14px; width: 100%; padding: 15px 10px; animation: blink 1.2s infinite; box-sizing: border-box; min-height: 140px; }
         .call-display .display-number { font-size: 54px; font-weight: 900; color: #78350f; line-height: 1.1; }
         .call-display .badge { font-size: 20px; padding: 3px 12px; border-radius: 6px; color: white; margin-bottom: 8px; font-weight: bold; }
         
-        /* 小さな案内文 */
         .call-subtext { font-size: 18px; color: #b45309; font-weight: bold; margin-top: 6px; }
         
-        /* 🌟 診察中の表示デザインも統一 */
-        .exam-display { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #fee2e2; border: 4px solid #f87171; border-radius: 14px; width: 100%; padding: 15px 5px; box-sizing: border-box; min-height: 120px; }
+        /* 🌟 診察中の枠デザインの横幅・余白設定も呼び出し中と完全に一致化 */
+        .exam-display { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #fee2e2; border: 4px solid #f87171; border-radius: 14px; width: 100%; padding: 15px 10px; box-sizing: border-box; min-height: 140px; }
         .exam-display .display-number { font-size: 48px; font-weight: 900; color: #7f1d1d; line-height: 1.1; }
         .exam-display .badge { font-size: 18px; padding: 3px 12px; border-radius: 6px; color: white; margin-bottom: 8px; font-weight: bold; }
         
-        /* 🌟 バッジの色をより濃く、はっきりとした原色系に強化 */
         .badge-walkin { background-color: #0056b3 !important; }
         .badge-reserve { background-color: #1e7e34 !important; }
         
@@ -60,57 +50,42 @@
         }
         
         .empty-grid-text { grid-column: span 5; text-align: center; color: #64748b; font-size: 24px; padding-top: 30px; font-weight: normal; }
-        .none-text { font-size: 34px; color: #64748b; font-weight: bold; }
+        .none-text { font-size: 34px; color: #64748b; font-weight: bold; padding: 20px 0; }
     </style>
 </head>
 <body>
 
     <div class="main-layout">
-        
-        <!-- 🧩 左側エリア：3/4幅（上下2段） -->
         <div class="left-column">
-            
-            <!-- 上段：お待ちの方 -->
             <div class="monitor-box waiting-box">
                 <div class="box-title waiting-title">☀️ お待ちの方（受付順）</div>
                 <div id="waiting-grid" class="grid-container"></div>
             </div>
-            
-            <!-- 下段：保留・検査中 -->
             <div class="monitor-box testing-box">
                 <div class="box-title testing-title">⏳ 診察待ち（保留・検査中）</div>
                 <div id="testing-grid" class="grid-container"></div>
             </div>
-            
         </div>
         
-        <!-- 📢 右側エリア：1/4幅 -->
         <div class="monitor-box right-column">
             <div class="box-title active-title">🔔 現在の状況</div>
             <div class="right-section">
-                
-                <!-- 呼び出し中ブロック -->
                 <div class="sub-block">
                     <div class="sub-label">📢 呼び出し中</div>
-                    <div id="call-container"></div>
+                    <div id="call-container" style="width: 100%;"></div>
                     <div id="call-msg" class="call-subtext"></div>
                 </div>
-                
-                <!-- 診察中ブロック -->
                 <div class="sub-block">
                     <div class="sub-label">🩺 診察中</div>
-                    <div id="exam-container"></div>
+                    <div id="exam-container" style="width: 100%;"></div>
                 </div>
-                
             </div>
         </div>
-        
     </div>
 
     <script>
         let patients = [];
 
-        // サーバーから最新データを自動で読み込む処理
         async function loadPatients() {
             try {
                 const response = await fetch('/api/sync');
@@ -125,16 +100,14 @@
 
         window.onload = function() {
             loadPatients();
-            setInterval(loadPatients, 3000); // 3秒ごとに自動更新
+            setInterval(loadPatients, 3000);
         };
 
-        // 「の方」をきれいに取り除く加工関数
         function cleanLabel(label) {
             if (!label) return '';
             return label.replace(/の方$/, '');
         }
 
-        // 左側のマス（グリッドアイテム）を作る関数
         function createGridItem(p) {
             const div = document.createElement('div');
             div.className = 'grid-item';
@@ -156,7 +129,6 @@
             
             const activePatients = patients.filter(p => p.status !== 'completed');
             
-            // 1. お待ちの方
             const waiters = activePatients.filter(p => p.status === 'waiting');
             if (waiters.length === 0) {
                 waitingGrid.innerHTML = '<div class="empty-grid-text">ただいまお待ちの方はいません</div>';
@@ -164,7 +136,6 @@
                 waiters.slice(0, 10).forEach(p => waitingGrid.appendChild(createGridItem(p)));
             }
             
-            // 2. 保留・検査中
             const testers = activePatients.filter(p => p.status === 'testing');
             if (testers.length === 0) {
                 testingGrid.innerHTML = '<div class="empty-grid-text">ただいま対象の方はいません</div>';
@@ -172,7 +143,6 @@
                 testers.slice(0, 10).forEach(p => testingGrid.appendChild(createGridItem(p)));
             }
             
-            // 3. 📢 右側：呼び出し中（デザインを統一化）
             const callers = activePatients.filter(p => p.status === 'calling');
             if (callers.length === 0) {
                 callContainer.innerHTML = '<div class="none-text">なし</div>';
@@ -191,7 +161,6 @@
                 callMsg.textContent = '診察室の前の席でお待ちください';
             }
             
-            // 4. 🩺 右側：診察中（デザインを統一化）
             const examiners = activePatients.filter(p => p.status === 'examining');
             if (examiners.length === 0) {
                 examContainer.innerHTML = '<div class="none-text">なし</div>';
