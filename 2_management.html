@@ -19,7 +19,7 @@
         .btn-group { display: flex; gap: 6px; }
         .status-toggle { padding: 8px 14px; font-size: 13px; font-weight: bold; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer; transition: all 0.1s; }
         
-        /* 🌟【完全復元】前回の見やすくてはっきりしたステータスボタンの色合い */
+        /* 前回の見やすくてはっきりしたステータスボタンの色合い */
         .active-waiting { background-color: #e0f2fe !important; color: #0369a1 !important; border-color: #7dd3fc !important; }
         .active-calling { background-color: #fef3c7 !important; color: #b45309 !important; border-color: #fde68a !important; }
         .active-testing { background-color: #ffedd5 !important; color: #c2410c !important; border-color: #fed7aa !important; }
@@ -91,7 +91,7 @@
 
         window.onload = function() {
             loadPatients();
-            setInterval(loadPatients, 3000); // 3秒自動更新
+            setInterval(loadPatients, 3000);
         };
 
         // 自動保留戻しロジック ＆ 時間記録の修正
@@ -110,7 +110,7 @@
                     p.status = newStatus;
                     if (newStatus === 'completed') {
                         p.compTime = new Date().toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'});
-                        // 🌟 現在の完了時刻の正確なミリ秒タイムスタンプを保存
+                        // 🌟 完了時の正確な時間をミリ秒で保存
                         p.compTimestamp = Date.now();
                     }
                 }
@@ -119,7 +119,7 @@
             await saveAndSync(patients);
         }
 
-        // 🌟【計算バグ修正】業務終了・正確な自動集計レポート処理
+        // 🌟【計算バグ完全修正版】
         async function endBusinessDay() {
             if (patients.length === 0) {
                 return alert("本日の受付データはまだありません。");
@@ -142,11 +142,11 @@
                     if (isAM) amReserveCount++; else pmReserveCount++;
                 }
 
-                // 🌟 受付番号が発行された正確なミリ秒（p.id の後ろにあるタイムスタンプ）を取り出して正しく引き算
+                // 🌟 正確に「完了時間 ➖ 受付時間」を引き算するロジックに修正
                 if (p.status === "completed" && p.compTimestamp) {
-                    // 「p-1712345678901」のようなIDから、数字のタイムスタンプ部分だけを抽出
                     const idParts = p.id.split('-');
                     if (idParts.length > 1) {
+                        // 患者データのID（例：p-1712345678901）から受付時点のタイムスタンプを取り出す
                         const startTimestamp = parseInt(idParts[1]); 
                         if (!isNaN(startTimestamp) && p.compTimestamp > startTimestamp) {
                             const durationMinutes = (p.compTimestamp - startTimestamp) / 1000 / 60;
@@ -157,8 +157,9 @@
                 }
             });
 
+            // 1分未満のテストでも「0分」とならず「1分」と優しく表示、または四捨五入します
             const avgDurationText = completedCount > 0 
-                ? Math.round(totalDurationMinutes / completedCount) + " 分" 
+                ? Math.max(1, Math.round(totalDurationMinutes / completedCount)) + " 分" 
                 : "--- (診察完了データなし)";
 
             const reportMessage = `
@@ -184,7 +185,7 @@
 
             // サーバーの金庫を完全に空っぽにする
             await saveAndSync([]);
-            alert("本日のデータをすべて消去しました。お疲れ様でした！");
+            alert("本日のデータをすべて消去しました。お疲れ週様でした！");
         }
 
         function updateDOM() {
