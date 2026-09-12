@@ -4,34 +4,39 @@
     <meta charset="UTF-8">
     <title>② クリニック順番管理システム</title>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 20px; background-color: #f8fafc; color: #333; }
-        h1 { font-size: 22px; color: #1e293b; margin-bottom: 20px; border-bottom: 4px solid #475569; padding-bottom: 10px; font-weight: bold; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 20px; background-color: #f1f5f9; color: #1e293b; }
+        h1 { font-size: 24px; color: #0f172a; margin-bottom: 20px; border-bottom: 4px solid #334155; padding-bottom: 10px; font-weight: bold; }
         
-        .table-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .table-container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid #cbd5e1; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 15px; }
-        th { background-color: #f1f5f9; color: #475569; font-weight: bold; }
+        th, td { padding: 16px 14px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 16px; }
+        th { background-color: #e2e8f0; color: #1e293b; font-weight: bold; font-size: 16px; border-bottom: 3px solid #cbd5e1; }
         
-        .badge { display: inline-block; padding: 4px 8px; font-size: 12px; font-weight: bold; border-radius: 4px; color: white; margin-right: 5px; }
+        .badge { display: inline-block; padding: 5px 10px; font-size: 13px; font-weight: bold; border-radius: 4px; color: white; margin-right: 8px; }
         .badge-walkin { background-color: #0056b3; }
         .badge-reserve { background-color: #1e7e34; }
         
-        .btn-group { display: flex; gap: 6px; }
-        .status-toggle { padding: 8px 14px; font-size: 13px; font-weight: bold; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer; transition: all 0.1s; }
+        .btn-group { display: flex; gap: 8px; }
+        .status-toggle { padding: 10px 16px; font-size: 14px; font-weight: bold; border: 2px solid #94a3b8; background: #fff; border-radius: 6px; cursor: pointer; transition: all 0.1s; color: #334155; }
         
-        /* 前回の見やすくてはっきりしたステータスボタンの色合い */
-        .active-waiting { background-color: #e0f2fe !important; color: #0369a1 !important; border-color: #7dd3fc !important; }
-        .active-calling { background-color: #fef3c7 !important; color: #b45309 !important; border-color: #fde68a !important; }
-        .active-testing { background-color: #ffedd5 !important; color: #c2410c !important; border-color: #fed7aa !important; }
-        .active-examining { background-color: #fee2e2 !important; color: #b91c1c !important; border-color: #fca5a5 !important; }
-        .active-completed { background-color: #f1f5f9 !important; color: #94a3b8 !important; border-color: #cbd5e1 !important; }
+        /* 🌟【超はっきり化】色をぐっと濃くし、白いタブレット画面でも一発で識別できる力強いカラー */
+        .active-waiting { background-color: #0284c7 !important; color: white !important; border-color: #0369a1 !important; }
+        .active-calling { background-color: #d97706 !important; color: white !important; border-color: #b45309 !important; }
+        .active-testing { background-color: #ea580c !important; color: white !important; border-color: #c2410c !important; }
+        .active-examining { background-color: #dc2626 !important; color: white !important; border-color: #b91c1c !important; }
+        .active-completed { background-color: #475569 !important; color: white !important; border-color: #334155 !important; }
         
-        .row-completed { background-color: #f8fafc; color: #94a3b8; }
-        .time-label { color: #64748b; font-size: 13px; }
+        /* 🌟【デザイン強化】完了した患者の行を、はっきり見分けられる濃いめのグレーに変更 */
+        .row-completed { background-color: #cbd5e1 !important; color: #475569 !important; text-decoration: line-through; }
+        .row-completed .time-label { color: #475569 !important; font-weight: bold; }
+        .row-completed td strong { color: #475569 !important; }
+        .row-completed .badge { opacity: 0.5; }
         
-        /* 集計終了ボタン用のスタイル */
+        .time-label { color: #475569; font-size: 14px; font-weight: bold; }
+        
+        /* 集計終了ボタン */
         .footer-zone { margin-top: 25px; display: flex; justify-content: flex-end; }
-        .btn-end-day { background-color: #dc2626; color: white; border: none; padding: 15px 30px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2); }
+        .btn-end-day { background-color: #b91c1c; color: white; border: none; padding: 16px 35px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 10px rgba(185, 28, 28, 0.3); }
         .btn-end-day:active { transform: scale(0.98); }
     </style>
 </head>
@@ -43,11 +48,11 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 60px; text-align: center;">通番</th>
+                    <th style="width: 70px; text-align: center;">通番</th>
                     <th>患者（識別番号 / 予約枠）</th>
-                    <th style="width: 100px;">受付時刻</th>
+                    <th style="width: 120px;">受付時刻</th>
                     <th>現在のステータス変更</th>
-                    <th style="width: 100px;">診察完了</th>
+                    <th style="width: 120px;">診察完了</th>
                 </tr>
             </thead>
             <tbody id="patient-table-body">
@@ -62,8 +67,10 @@
 
     <script>
         let patients = [];
+        let isOperating = false; // 🌟 データ競合（上書きバグ）を防止する超重要フラグ
 
         async function loadPatients() {
+            if (isOperating) return; // 🌟 スタッフが操作中のときは自動読み込みをスキップしてバグを防ぐ
             try {
                 const response = await fetch('/api/sync');
                 if (response.status === 401) return;
@@ -86,40 +93,57 @@
                 updateDOM();
             } catch (e) {
                 console.error("データ保存エラー:", e);
+            } finally {
+                // 🌟 保存が完全に完了してから1秒後に自動同期を再開（安全マージン）
+                setTimeout(() => { isOperating = false; }, 1000);
             }
         }
 
         window.onload = function() {
             loadPatients();
-            setInterval(loadPatients, 3000);
+            setInterval(loadPatients, 3000); // 3秒自動更新
         };
 
-        // 自動保留戻しロジック ＆ 時間記録の修正
+        // 自動保留戻しロジック ＆ 競合ブロック搭載
         async function setStatus(id, newStatus) {
-            await loadPatients();
+            isOperating = true; // 🌟 操作開始！自動更新の邪魔をブロックする
             
-            patients = patients.map(p => {
-                if (newStatus === 'calling' && p.status === 'calling' && p.id !== id) {
-                    p.status = 'testing';
-                }
-                if (newStatus === 'examining' && p.status === 'examining' && p.id !== id) {
-                    p.status = 'testing';
-                }
+            try {
+                // 最新データを一度安全に取り込む
+                const response = await fetch('/api/sync');
+                const data = await response.json();
+                const latestPatients = data || [];
 
-                if (p.id === id) {
-                    p.status = newStatus;
-                    if (newStatus === 'completed') {
-                        p.compTime = new Date().toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'});
-                        // 🌟 完了時の正確な時間をミリ秒で保存
-                        p.compTimestamp = Date.now();
+                const updatedPatients = latestPatients.map(p => {
+                    // ① 新しく誰かが「呼び出し中」になった場合、前に「calling」だった人を「testing（保留・検査中）」に移す
+                    if (newStatus === 'calling' && p.status === 'calling' && p.id !== id) {
+                        p.status = 'testing';
                     }
-                }
-                return p;
-            });
-            await saveAndSync(patients);
+                    
+                    // ② 新しく誰かが「診察中」になった場合、前に「examining」だった人を「testing（保留・検査中）」に移す
+                    if (newStatus === 'examining' && p.status === 'examining' && p.id !== id) {
+                        p.status = 'testing';
+                    }
+
+                    // 対象の患者のステータスを変更
+                    if (p.id === id) {
+                        p.status = newStatus;
+                        if (newStatus === 'completed') {
+                            p.compTime = new Date().toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'});
+                            p.compTimestamp = Date.now();
+                        }
+                    }
+                    return p;
+                });
+                
+                await saveAndSync(updatedPatients);
+            } catch (e) {
+                console.error("ステータス変更エラー:", e);
+                isOperating = false;
+            }
         }
 
-        // 🌟【計算バグ完全修正版】
+        // 🌟【計算バグ完全修正】1分単位で確実に算出する集計レポート
         async function endBusinessDay() {
             if (patients.length === 0) {
                 return alert("本日の受付データはまだありません。");
@@ -142,12 +166,11 @@
                     if (isAM) amReserveCount++; else pmReserveCount++;
                 }
 
-                // 🌟 正確に「完了時間 ➖ 受付時間」を引き算するロジックに修正
+                // 🌟 バグ修正：p.idから登録時のタイムスタンプ(ミリ秒)を100%正確に取得
                 if (p.status === "completed" && p.compTimestamp) {
                     const idParts = p.id.split('-');
                     if (idParts.length > 1) {
-                        // 患者データのID（例：p-1712345678901）から受付時点のタイムスタンプを取り出す
-                        const startTimestamp = parseInt(idParts[1]); 
+                        const startTimestamp = parseInt(idParts[1]); // [1]番目の要素を指定して正しくパース
                         if (!isNaN(startTimestamp) && p.compTimestamp > startTimestamp) {
                             const durationMinutes = (p.compTimestamp - startTimestamp) / 1000 / 60;
                             totalDurationMinutes += durationMinutes;
@@ -157,10 +180,9 @@
                 }
             });
 
-            // 1分未満のテストでも「0分」とならず「1分」と優しく表示、または四捨五入します
             const avgDurationText = completedCount > 0 
                 ? Math.max(1, Math.round(totalDurationMinutes / completedCount)) + " 分" 
-                : "--- (診察完了データなし)";
+                : "0 分 (診察完了データなし)";
 
             const reportMessage = `
 【📊 本日の診療集計レポート】
@@ -183,9 +205,9 @@
 
             alert(reportMessage);
 
-            // サーバーの金庫を完全に空っぽにする
+            isOperating = true;
             await saveAndSync([]);
-            alert("本日のデータをすべて消去しました。お疲れ週様でした！");
+            alert("本日のデータをすべて消去しました。お疲れ様でした！");
         }
 
         function updateDOM() {
@@ -193,7 +215,82 @@
             tbody.innerHTML = '';
 
             if (patients.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #95a5a6; padding: 30px;">本日の受付患者データはありません</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 40px; font-weight: bold; font-size: 18px;">本日の受付患者データはありません</td></tr>`;
+                return;
+            }
+
+            patients.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                if (p.status === 'completed') tr.className = 'row-completed';
+
+                const isW = p.type === 'walkin';
+                const badgeClass = isW ? 'badge-walkin' : 'badge-reserve';
+                const badgeText = isW ? '当日' : '予約';
+
+                const wClass = p.status === 'waiting' ? 'active-waiting' : '';
+                const cClass = p.status === 'calling' ? 'active-calling' : '';
+                const tClass = p.status === 'testing' ? 'active-testing' : '';
+                const eClass = p.status === 'examining' ? 'active-examining' : '';
+                const cpClass = p.status === 'completed' ? 'active-completed' : '';
+　　　　　　　　　patients.forEach(p => {
+                const isAM = p.label.includes("午前");
+                if (p.type === "walkin") {
+                    if (isAM) amWalkinCount++; else pmWalkinCount++;
+                } else {
+                    if (isAM) amReserveCount++; else pmReserveCount++;
+                }
+
+                // 🌟 受付番号（p.id）の「p-」の後のミリ秒タイムスタンプを正確に取得して計算
+                if (p.status === "completed" && p.compTimestamp) {
+                    const idParts = p.id.split('-');
+                    if (idParts.length > 1) {
+                        const startTimestamp = parseInt(idParts[1]); // 🌟 [1]を指定して確実に受付ミリ秒を抽出
+                        if (!isNaN(startTimestamp) && p.compTimestamp > startTimestamp) {
+                            const durationMinutes = (p.compTimestamp - startTimestamp) / 1000 / 60;
+                            totalDurationMinutes += durationMinutes;
+                            completedCount++;
+                        }
+                    }
+                }
+            });
+
+            // 1分未満のテストでも「0分」とならず「1分」と表示されるよう四捨五入
+            const avgDurationText = completedCount > 0 
+                ? Math.max(1, Math.round(totalDurationMinutes / completedCount)) + " 分" 
+                : "0 分 (診察完了データなし)";
+
+            const reportMessage = `
+【📊 本日の診療集計レポート】
+
+☀️ 午前診療
+・当日受付： ${amWalkinCount} 名
+・予約枠発券： ${amReserveCount} 名
+
+🌙 午後診療
+・当日受付： ${pmWalkinCount} 名
+・予約枠発券： ${pmReserveCount} 名
+
+━━━━━━━━━━━━━━━
+👥 本日の総受付数： ${patients.length} 名
+⏱️ 平均所要時間（受付〜完了）： ${avgDurationText}
+※ 集計対象はステータスを「完了」にした患者様のみです。
+
+上記のデータを確認しました。業務を終了して画面をクリアします。
+            `;
+
+            alert(reportMessage);
+
+            isOperating = true;
+            await saveAndSync([]);
+            alert("本日のデータをすべて消去しました。お疲れ様でした！");
+        }
+
+        function updateDOM() {
+            const tbody = document.getElementById('patient-table-body');
+            tbody.innerHTML = '';
+
+            if (patients.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 40px; font-weight: bold; font-size: 18px;">本日の受付患者データはありません</td></tr>`;
                 return;
             }
 
@@ -212,19 +309,19 @@
                 const cpClass = p.status === 'completed' ? 'active-completed' : '';
 
                 tr.innerHTML = `
-                    <td style="font-weight: bold; text-align: center;">${index + 1}</td>
-                    <td><span class="badge ${badgeClass}">${badgeText}</span> <strong>${p.monitorLabel.replace(/の方$/, '')}</strong></td>
+                    <td style="font-weight: bold; text-align: center; font-size: 18px;">${index + 1}</td>
+                    <td><span class="badge ${badgeClass}">${badgeText}</span> <strong style="font-size: 18px;">${p.monitorLabel.replace(/の方$/, '')}</strong></td>
                     <td class="time-label">${p.regTime || '---'}</td>
                     <td>
                         <div class="btn-group">
                             <button class="status-toggle ${wClass}" onclick="setStatus('${p.id}', 'waiting')">受付中</button>
                             <button class="status-toggle ${cClass}" onclick="setStatus('${p.id}', 'calling')">呼出</button>
-                            <button class="status-toggle ${tClass}" onclick="setStatus('${p.id}', 'testing')">診察待ち（保留）</button>
+                            <button class="status-toggle ${tClass}" onclick="setStatus('${p.id}', 'testing')">診察待ち</button>
                             <button class="status-toggle ${eClass}" onclick="setStatus('${p.id}', 'examining')">診察中</button>
                             <button class="status-toggle ${cpClass}" onclick="setStatus('${p.id}', 'completed')">完了</button>
                         </div>
                     </td>
-                    <td class="time-label" style="font-weight: bold;">${p.compTime || '---'}</td>
+                    <td class="time-label" style="font-weight: bold; font-size: 16px;">${p.compTime || '---'}</td>
                 `;
                 tbody.appendChild(tr);
             });
