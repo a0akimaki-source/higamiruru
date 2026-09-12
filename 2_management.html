@@ -218,21 +218,8 @@
                 tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 40px; font-weight: bold; font-size: 18px;">本日の受付患者データはありません</td></tr>`;
                 return;
             }
-
-            patients.forEach((p, index) => {
-                const tr = document.createElement('tr');
-                if (p.status === 'completed') tr.className = 'row-completed';
-
-                const isW = p.type === 'walkin';
-                const badgeClass = isW ? 'badge-walkin' : 'badge-reserve';
-                const badgeText = isW ? '当日' : '予約';
-
-                const wClass = p.status === 'waiting' ? 'active-waiting' : '';
-                const cClass = p.status === 'calling' ? 'active-calling' : '';
-                const tClass = p.status === 'testing' ? 'active-testing' : '';
-                const eClass = p.status === 'examining' ? 'active-examining' : '';
-                const cpClass = p.status === 'completed' ? 'active-completed' : '';
-　　　　　　　　　patients.forEach(p => {
+                  
+                patients.forEach(p => {
                 const isAM = p.label.includes("午前");
                 if (p.type === "walkin") {
                     if (isAM) amWalkinCount++; else pmWalkinCount++;
