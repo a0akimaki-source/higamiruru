@@ -19,14 +19,14 @@
         .btn-group { display: flex; gap: 8px; }
         .status-toggle { padding: 10px 16px; font-size: 14px; font-weight: bold; border: 2px solid #94a3b8; background: #fff; border-radius: 6px; cursor: pointer; transition: all 0.1s; color: #334155; }
         
-        /* 🌟【超はっきり化】色をぐっと濃くし、白いタブレット画面でも一発で識別できる力強いカラー */
+        /* 濃くてはっきりしたステータスボタンの色合い */
         .active-waiting { background-color: #0284c7 !important; color: white !important; border-color: #0369a1 !important; }
         .active-calling { background-color: #d97706 !important; color: white !important; border-color: #b45309 !important; }
         .active-testing { background-color: #ea580c !important; color: white !important; border-color: #c2410c !important; }
         .active-examining { background-color: #dc2626 !important; color: white !important; border-color: #b91c1c !important; }
         .active-completed { background-color: #475569 !important; color: white !important; border-color: #334155 !important; }
         
-        /* 🌟【デザイン強化】完了した患者の行を、はっきり見分けられる濃いめのグレーに変更 */
+        /* 完了した患者の行（濃いグレー） */
         .row-completed { background-color: #cbd5e1 !important; color: #475569 !important; text-decoration: line-through; }
         .row-completed .time-label { color: #475569 !important; font-weight: bold; }
         .row-completed td strong { color: #475569 !important; }
@@ -67,10 +67,10 @@
 
     <script>
         let patients = [];
-        let isOperating = false; // 🌟 データ競合（上書きバグ）を防止する超重要フラグ
+        let isOperating = false; // 操作中の自動更新競合バグを防止するフラグ
 
         async function loadPatients() {
-            if (isOperating) return; // 🌟 スタッフが操作中のときは自動読み込みをスキップしてバグを防ぐ
+            if (isOperating) return; 
             try {
                 const response = await fetch('/api/sync');
                 if (response.status === 401) return;
@@ -94,38 +94,30 @@
             } catch (e) {
                 console.error("データ保存エラー:", e);
             } finally {
-                // 🌟 保存が完全に完了してから1秒後に自動同期を再開（安全マージン）
                 setTimeout(() => { isOperating = false; }, 1000);
             }
         }
 
         window.onload = function() {
             loadPatients();
-            setInterval(loadPatients, 3000); // 3秒自動更新
+            setInterval(loadPatients, 3000); 
         };
 
-        // 自動保留戻しロジック ＆ 競合ブロック搭載
+        // 自動保留戻しロジック ＆ 競合ブロック
         async function setStatus(id, newStatus) {
-            isOperating = true; // 🌟 操作開始！自動更新の邪魔をブロックする
-            
+            isOperating = true; 
             try {
-                // 最新データを一度安全に取り込む
                 const response = await fetch('/api/sync');
                 const data = await response.json();
                 const latestPatients = data || [];
 
                 const updatedPatients = latestPatients.map(p => {
-                    // ① 新しく誰かが「呼び出し中」になった場合、前に「calling」だった人を「testing（保留・検査中）」に移す
                     if (newStatus === 'calling' && p.status === 'calling' && p.id !== id) {
                         p.status = 'testing';
                     }
-                    
-                    // ② 新しく誰かが「診察中」になった場合、前に「examining」だった人を「testing（保留・検査中）」に移す
                     if (newStatus === 'examining' && p.status === 'examining' && p.id !== id) {
                         p.status = 'testing';
                     }
-
-                    // 対象の患者のステータスを変更
                     if (p.id === id) {
                         p.status = newStatus;
                         if (newStatus === 'completed') {
@@ -135,15 +127,13 @@
                     }
                     return p;
                 });
-                
                 await saveAndSync(updatedPatients);
             } catch (e) {
                 console.error("ステータス変更エラー:", e);
                 isOperating = false;
             }
         }
-
-        // 🌟【計算バグ完全修正】1分単位で確実に算出する集計レポート
+          // 🌟 正確に1分単位で計算する業務終了・集計レポート処理
         async function endBusinessDay() {
             if (patients.length === 0) {
                 return alert("本日の受付データはまだありません。");
@@ -166,11 +156,11 @@
                     if (isAM) amReserveCount++; else pmReserveCount++;
                 }
 
-                // 🌟 バグ修正：p.idから登録時のタイムスタンプ(ミリ秒)を100%正確に取得
+                // 受付番号（p.id）の「p-」の後ろにある正確な受付ミリ秒タイムスタンプを抽出
                 if (p.status === "completed" && p.compTimestamp) {
                     const idParts = p.id.split('-');
                     if (idParts.length > 1) {
-                        const startTimestamp = parseInt(idParts[1]); // [1]番目の要素を指定して正しくパース
+                        const startTimestamp = parseInt(idParts[1]); // 🌟インデックス[1]を指定して確実にパース
                         if (!isNaN(startTimestamp) && p.compTimestamp > startTimestamp) {
                             const durationMinutes = (p.compTimestamp - startTimestamp) / 1000 / 60;
                             totalDurationMinutes += durationMinutes;
@@ -180,68 +170,6 @@
                 }
             });
 
-            const avgDurationText = completedCount > 0 
-                ? Math.max(1, Math.round(totalDurationMinutes / completedCount)) + " 分" 
-                : "0 分 (診察完了データなし)";
-
-            const reportMessage = `
-【📊 本日の診療集計レポート】
-
-☀️ 午前診療
-・当日受付： ${amWalkinCount} 名
-・予約枠発券： ${amReserveCount} 名
-
-🌙 午後診療
-・当日受付： ${pmWalkinCount} 名
-・予約枠発券： ${pmReserveCount} 名
-
-━━━━━━━━━━━━━━━
-👥 本日の総受付数： ${patients.length} 名
-⏱️ 平均所要時間（受付〜完了）： ${avgDurationText}
-※ 集計対象はステータスを「完了」にした患者様のみです。
-
-上記のデータを確認しました。業務を終了して画面をクリアします。
-            `;
-
-            alert(reportMessage);
-
-            isOperating = true;
-            await saveAndSync([]);
-            alert("本日のデータをすべて消去しました。お疲れ様でした！");
-        }
-
-        function updateDOM() {
-            const tbody = document.getElementById('patient-table-body');
-            tbody.innerHTML = '';
-
-            if (patients.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 40px; font-weight: bold; font-size: 18px;">本日の受付患者データはありません</td></tr>`;
-                return;
-            }
-                  
-                patients.forEach(p => {
-                const isAM = p.label.includes("午前");
-                if (p.type === "walkin") {
-                    if (isAM) amWalkinCount++; else pmWalkinCount++;
-                } else {
-                    if (isAM) amReserveCount++; else pmReserveCount++;
-                }
-
-                // 🌟 受付番号（p.id）の「p-」の後のミリ秒タイムスタンプを正確に取得して計算
-                if (p.status === "completed" && p.compTimestamp) {
-                    const idParts = p.id.split('-');
-                    if (idParts.length > 1) {
-                        const startTimestamp = parseInt(idParts[1]); // 🌟 [1]を指定して確実に受付ミリ秒を抽出
-                        if (!isNaN(startTimestamp) && p.compTimestamp > startTimestamp) {
-                            const durationMinutes = (p.compTimestamp - startTimestamp) / 1000 / 60;
-                            totalDurationMinutes += durationMinutes;
-                            completedCount++;
-                        }
-                    }
-                }
-            });
-
-            // 1分未満のテストでも「0分」とならず「1分」と表示されるよう四捨五入
             const avgDurationText = completedCount > 0 
                 ? Math.max(1, Math.round(totalDurationMinutes / completedCount)) + " 分" 
                 : "0 分 (診察完了データなし)";
