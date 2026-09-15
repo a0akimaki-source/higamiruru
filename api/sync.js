@@ -1,4 +1,5 @@
-// 🌟【完全連動版】Vercelで確認したURL（redis:// から始まる文字列）を貼り付けます
+
+// 🌟【データ通信修正版】Vercelで確認した「redis://」から始まるURLを貼り付けてください
 const REDIS_URL = "redis://default:nL0gsSSOYQIRBAbG9dSTeRHyhiHAlhK4@fuel-perfect-ultrapolished-46352.db.redis.io:14291";
 
 export default async function handler(req, res) {
@@ -19,29 +20,26 @@ export default async function handler(req, res) {
       return res.status(401).send('Authentication required.');
     }
 
-    // 🌍 2. データの自動同期（Redisに直接読み書きする安全な通信）
+    // 🌍 2. データの自動同期（データのズレを完全に修正）
     const cleanUrl = REDIS_URL.trim().replace(/'/g, "").replace(/"/g, "");
-    
-    // redis://[:password]@host:port から認証情報とホストを分解
     const match = cleanUrl.match(/redis:\/\/([^:]+):([^@]+)@([^:]+):(\d+)/);
     if (!match) {
       return res.status(500).json({ error: "URLの書き方が正しくありません。" });
     }
     const [_, username, password, host, port] = match;
-
-    // Upstash / Vercel KV の REST API 形式へリクエストを送るためのURL
     const kvRestUrl = `https://${host}`;
 
     if (req.method === 'POST') {
-      // 🌟 金庫（Redis）へデータを確実に保存
-      const response = await fetch(`${kvRestUrl}/set/patients`, {
+      // 🌟 受付画面や管理画面からのデータを正しい文字形式で金庫に保存
+      const pData = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      await fetch(`${kvRestUrl}/set/patients`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${password}` },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify(pData)
       });
       return res.status(200).json({ success: true });
     } else {
-      // 🌟 金庫（Redis）からデータを確実に読み出し
+      // 🌟 金庫からデータを読み出し、正しい配列形式に直して各画面に送る
       const response = await fetch(`${kvRestUrl}/get/patients`, {
         headers: { Authorization: `Bearer ${password}` }
       });
@@ -49,10 +47,17 @@ export default async function handler(req, res) {
       
       let patientsList = [];
       if (data && data.result) {
-        // 保存されているデータがあれば解析
-        patientsList = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+        let resData = data.result;
+        // 文字列が二重に重なっている場合を考慮して2回解析
+        if (typeof resData === 'string') {
+          try { resData = JSON.parse(resData); } catch(e){}
+        }
+        if (typeof resData === 'string') {
+          try { resData = JSON.parse(resData); } catch(e){}
+        }
+        patientsList = resData;
       }
-      return res.status(200).json(patientsList || []);
+      return res.status(200).json(Array.isArray(patientsList) ? patientsList : []);
     }
   } catch (error) {
     return res.status(500).json({ error: error.message });
