@@ -1,5 +1,5 @@
 // 🌟【完全連動版】Vercelで確認したURL（redis:// から始まる文字列）を貼り付けます
-const REDIS_URL = "ここに redis:// から始まるURLを貼り付け";
+const REDIS_URL = "redis://default:nL0gsSSOYQIRBAbG9dSTeRHyhiHAlhK4@fuel-perfect-ultrapolished-46352.db.redis.io:14291";
 
 export default async function handler(req, res) {
   // 🔐 1. パスワード制限（Basic認証）
