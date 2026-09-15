@@ -1,5 +1,5 @@
 
-// 🌟【データ通信修正版】Vercelで確認した「redis://」から始まるURLを貼り付けてください
+// 🌟【通信バグ完全解消版】Vercelで確認した「redis://」から始まるURLを貼り付けてください
 const REDIS_URL = "redis://default:nL0gsSSOYQIRBAbG9dSTeRHyhiHAlhK4@fuel-perfect-ultrapolished-46352.db.redis.io:14291";
 
 export default async function handler(req, res) {
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       return res.status(401).send('Authentication required.');
     }
 
-    // 🌍 2. データの自動同期（データのズレを完全に修正）
+    // 🌍 2. データの自動同期（Vercel KVの通信仕様に完全最適化）
     const cleanUrl = REDIS_URL.trim().replace(/'/g, "").replace(/"/g, "");
     const match = cleanUrl.match(/redis:\/\/([^:]+):([^@]+)@([^:]+):(\d+)/);
     if (!match) {
@@ -30,28 +30,27 @@ export default async function handler(req, res) {
     const kvRestUrl = `https://${host}`;
 
     if (req.method === 'POST') {
-      // 🌟 受付画面や管理画面からのデータを正しい文字形式で金庫に保存
-      const pData = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-      await fetch(`${kvRestUrl}/set/patients`, {
+      // 🌟【最重要修正】Vercel KVの仕様に合わせ、確実に金庫の「patients」という棚にデータを保存する正しい形式
+      const patientsData = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      
+      await fetch(`${kvRestUrl}/`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${password}` },
-        body: JSON.stringify(pData)
+        body: JSON.stringify(["SET", "patients", patientsData])
       });
       return res.status(200).json({ success: true });
     } else {
-      // 🌟 金庫からデータを読み出し、正しい配列形式に直して各画面に送る
-      const response = await fetch(`${kvRestUrl}/get/patients`, {
-        headers: { Authorization: `Bearer ${password}` }
+      // 🌟【最重要修正】金庫の「patients」という棚からデータを正しく取り出す形式
+      const response = await fetch(`${kvRestUrl}/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${password}` },
+        body: JSON.stringify(["GET", "patients"])
       });
       const data = await response.json();
       
       let patientsList = [];
       if (data && data.result) {
         let resData = data.result;
-        // 文字列が二重に重なっている場合を考慮して2回解析
-        if (typeof resData === 'string') {
-          try { resData = JSON.parse(resData); } catch(e){}
-        }
         if (typeof resData === 'string') {
           try { resData = JSON.parse(resData); } catch(e){}
         }
