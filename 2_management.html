@@ -19,7 +19,7 @@
         .btn-group { display: flex; gap: 8px; }
         .status-toggle { padding: 10px 16px; font-size: 14px; font-weight: bold; border: 2px solid #94a3b8; background: #fff; border-radius: 6px; cursor: pointer; transition: all 0.1s; color: #334155; }
         
-        /* はっきりしたステータスボタンの色合い */
+        /* 濃くてはっきりしたステータスボタンの色合い */
         .active-waiting { background-color: #0284c7 !important; color: white !important; border-color: #0369a1 !important; }
         .active-calling { background-color: #d97706 !important; color: white !important; border-color: #b45309 !important; }
         .active-testing { background-color: #ea580c !important; color: white !important; border-color: #c2410c !important; }
@@ -67,11 +67,11 @@
 
     <script>
         let patients = [];
-        let isOperating = false; // キャッシュによる先祖返りを防止するフラグ
+        let isOperating = false; 
         let opTimeout = null;
 
         async function loadPatients() {
-            if (isOperating) return; // 操作中およびその直後数秒間は自動更新をスキップしてパタパタするバグを防ぐ
+            if (isOperating) return; 
             try {
                 const response = await fetch('/api/sync');
                 if (response.status === 401) return;
@@ -102,13 +102,12 @@
             setInterval(loadPatients, 3000); 
         };
 
-        // 自動保留戻しロジック ＆ サーバーキャッシュバグ対策ブロック
+        // 自動保留戻しロジック ＆ 強力データ保護
         async function setStatus(id, newStatus) {
-            // 前回のタイマーがあればクリア
             if (opTimeout) clearTimeout(opTimeout);
-            isOperating = true; // 強力に自動更新をロック
+            isOperating = true; 
             
-            // 画面のパタパタを完全に防ぐため、まずは手元の画面データを今押した状態に書き換えて固定する
+            // サーバーから返ってくるまでの間、手元の画面を確実に固定
             patients = patients.map(p => {
                 if (newStatus === 'calling' && p.status === 'calling' && p.id !== id) p.status = 'testing';
                 if (newStatus === 'examining' && p.status === 'examining' && p.id !== id) p.status = 'testing';
@@ -121,15 +120,14 @@
                 }
                 return p;
             });
-            updateDOM(); // 即座に画面を固定
+            updateDOM(); 
             
-            // バックグラウンドでサーバーにデータを送信
             await saveAndSync(patients);
             
-            // 🌟 サーバーの古いキャッシュが消えるまで4秒間自動同期の介入をブロックする
-            opTimeout = setTimeout(() => { isOperating = false; }, 4000);
+            // サーバーのキャッシュがクリーンになるまで同期の介入をしっかりブロック
+            opTimeout = setTimeout(() => { isOperating = false; }, 3000);
         }
-       // 🌟【計算バグ完全修正】1分単位で100%確実に算出する集計レポート
+          // 🌟 正確に1分単位で計算する業務終了・集計レポート処理
         async function endBusinessDay() {
             if (patients.length === 0) {
                 return alert("本日の受付データはまだありません。");
@@ -152,11 +150,11 @@
                     if (isAM) amReserveCount++; else pmReserveCount++;
                 }
 
-                // 🌟 バグ修正：患者ID（p.id）の「p-タイムスタンプ」から、受付時のミリ秒を正確に100%抽出します
+                // 🌟 バグ修正：患者ID（p.id）の「p-タイムスタンプ」から受付ミリ秒を確実に抽出
                 if (p.status === "completed" && p.compTimestamp) {
                     const idParts = p.id.split('-');
                     if (idParts.length > 1) {
-                        const startTimestamp = parseInt(idParts[1]); // 🌟 [1]番目の要素を指定して確実に受付ミリ秒をパース
+                        const startTimestamp = parseInt(idParts[1]); // 🌟インデックス[1]を指定して確実にパース
                         if (!isNaN(startTimestamp) && p.compTimestamp > startTimestamp) {
                             const durationMinutes = (p.compTimestamp - startTimestamp) / 1000 / 60;
                             totalDurationMinutes += durationMinutes;
@@ -240,4 +238,4 @@
         }
     </script>
 </body>
-</html>  
+</html>
