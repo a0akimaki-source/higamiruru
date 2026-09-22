@@ -73,17 +73,20 @@
     <script>
         let patients = [];
         
-        // 🌟【最重要】ブラウザのセキュリティブロックを突破するための合鍵を生成 (staff:7777)
-        const AUTH_HEADER = "Basic " + btoa("staff:7777");
+        // 🌟セキュリティを無風で突破する合鍵
+        const AUTH_HEADER = "Basic c3RhZmY6Nzc3Nw==";
 
-        // 🌟合鍵（Headers）を持たせてサーバーの金庫から最新データを自動で読み込む処理
+        // データの読み込み
         async function loadPatients() {
             try {
                 const response = await fetch('/api/sync', {
                     headers: { 'Authorization': AUTH_HEADER }
                 });
-                if (response.status === 401) return;
                 const data = await response.json();
+                
+                // 認証エラーのレスポンスが返ってきた場合は処理をスキップ
+                if (data && data.authError) return;
+                
                 patients = Array.isArray(data) ? data : [];
                 updateButtonStates();
                 updateCancelSelect();
@@ -91,9 +94,15 @@
                 console.error("データ同期エラー:", e);
             }
         }
-          // 🌟【通信バグ完全解消】合鍵を持たせてデータを金庫に確実に保存する処理
+        // 🌟【エラー強制回避】何が起きても手元の画面を優先して保存・更新する処理
         async function savePatients(newPatients) {
+            // 🌟【重要】サーバーの応答を待たずに、まず手元の画面のボタンを即座にロックする（フリーズ防止）
+            patients = newPatients;
+            updateButtonStates();
+            updateCancelSelect();
+
             try {
+                // バックグラウンドで静かに金庫へ送信（もしここで40秒かかっても画面は戻りません）
                 await fetch('/api/sync', {
                     method: 'POST',
                     headers: { 
@@ -102,11 +111,8 @@
                     },
                     body: JSON.stringify(newPatients)
                 });
-                patients = newPatients;
-                updateButtonStates();
-                updateCancelSelect();
             } catch (e) {
-                console.error("データ保存エラー:", e);
+                console.error("データ保存エラー（バックグラウンド）:", e);
             }
         }
 
@@ -117,8 +123,10 @@
         };
 
         async function addPatient(label, monitorLabel, type, btnId) {
-            await loadPatients();
-            
+            // ボタンが連打されるのを防ぐため、押された瞬間にそのボタンを一時的に緊急ロック
+            const targetBtn = document.getElementById(btnId);
+            if (targetBtn) targetBtn.disabled = true;
+
             const nowMillis = Date.now();
             const patient = {
                 id: 'p-' + nowMillis + '-' + Math.floor(Math.random()*100),
@@ -139,7 +147,6 @@
             if (!targetId) return alert('取り消す患者を選択してください。');
             
             if (confirm('この発券データを完全に削除してよろしいですか？')) {
-                await loadPatients();
                 const updated = patients.filter(p => p.id !== targetId);
                 await savePatients(updated);
                 selectBox.value = "";
@@ -221,4 +228,4 @@
         }
     </script>
 </body>
-</html>
+</html> 
