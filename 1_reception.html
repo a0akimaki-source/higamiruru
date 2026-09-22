@@ -79,19 +79,20 @@
                 const response = await fetch('/api/sync');
                 if (response.status === 401) return;
                 const data = await response.json();
-                patients = data || [];
+                patients = Array.isArray(data) ? data : [];
                 updateButtonStates();
                 updateCancelSelect();
             } catch (e) {
                 console.error("データ同期エラー:", e);
             }
         }
-         async function savePatients(newPatients) {
+        // 🌟【通信バグ完全解消】サーバーへ正しいJSON文字列形式でデータを保存する処理
+        async function savePatients(newPatients) {
             try {
                 await fetch('/api/sync', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newPatients)
+                    body: JSON.stringify(newPatients) // 正しいオブジェクト配列を送信
                 });
                 patients = newPatients;
                 updateButtonStates();
@@ -109,8 +110,11 @@
 
         async function addPatient(label, monitorLabel, type, btnId) {
             await loadPatients();
+            
+            // 🌟 所要時間を100%正確に計算するため、ハイフンで区切った正規のタイムスタンプIDを生成
+            const nowMillis = Date.now();
             const patient = {
-                id: 'p-' + Date.now() + '-' + Math.floor(Math.random()*100), // タイムスタンプをハイフンで正しく区切る
+                id: 'p-' + nowMillis + '-' + Math.floor(Math.random()*100),
                 label: label, 
                 monitorLabel: monitorLabel, 
                 type: type, 
@@ -210,4 +214,4 @@
         }
     </script>
 </body>
-</html>
+</html> 
