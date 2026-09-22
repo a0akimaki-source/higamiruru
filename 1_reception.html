@@ -16,14 +16,14 @@
         h2 { font-size: 16px; color: #334155; margin: 20px 0 10px 0; border-left: 4px solid #94a3b8; padding-left: 8px; font-weight: bold; }
         h2.first-h2 { margin-top: 0; }
 
-        /* 🌟 ボタンの横並び数を「10個固定」へ変更し、タブレットサイズで大きく押しやすく最適化 */
+        /* ボタンの横並び数を「10個固定」へ変更し、タブレットサイズで大きく押しやすく最適化 */
         .btn-group { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; margin-bottom: 15px; }
         button { padding: 18px 4px; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 3px 6px rgba(0,0,0,0.08); transition: transform 0.1s; }
         button:active { transform: scale(0.95); }
         
-        /* 🌟 ボタン背景色と文字色のコントラストを強め、見やすさを強化 */
+        /* ボタン背景色と文字色のコントラストを強め、見やすさを強化 */
         .btn-am-walkin { background-color: #0056b3; color: white; border: 1px solid #004085; }
-        .btn-pm-walkin { background-color: #2b6cb0; color: white; border: 1px solid #2b6cb0; }
+        .btn-pm-walkin { background-color: #2b6cb0; color: white; border: 1px solid #1a365d; }
         .btn-reserve { background-color: #1e7e34; color: white; border: 1px solid #1c7430; }
         
         button:disabled { background-color: #cbd5e1 !important; color: #64748b !important; cursor: not-allowed; box-shadow: none; border-color: #94a3b8 !important; }
@@ -86,8 +86,7 @@
                 console.error("データ同期エラー:", e);
             }
         }
-
-        async function savePatients(newPatients) {
+         async function savePatients(newPatients) {
             try {
                 await fetch('/api/sync', {
                     method: 'POST',
@@ -111,7 +110,7 @@
         async function addPatient(label, monitorLabel, type, btnId) {
             await loadPatients();
             const patient = {
-                id: 'p-' + Date.now() + Math.floor(Math.random()*100),
+                id: 'p-' + Date.now() + '-' + Math.floor(Math.random()*100), // タイムスタンプをハイフンで正しく区切る
                 label: label, 
                 monitorLabel: monitorLabel, 
                 type: type, 
@@ -186,7 +185,7 @@
                 b.onclick = () => addPatient(`午前 ${i}番`, `${i}番`, 'walkin', b.id); amWBox.appendChild(b);
             }
 
-            // 2. 午前予約 (9:00〜11:30) ➔ 横並び10個の倍数で並びます
+            // 2. 午前予約 (9:00〜11:30)
             const amRBox = document.getElementById('am-reserve-btns');
             const amSlots = generateSlots12H(9, 0, 11, 30, false);
             amSlots.forEach((t, i) => {
@@ -201,7 +200,7 @@
                 b.onclick = () => addPatient(`午後 ${i}番`, `${i}番`, 'walkin', b.id); pmWBox.appendChild(b);
             }
 
-            // 4. 午後予約 (14:00〜17:30) ➔ 横並び10個の倍数で並びます
+            // 4. 午後予約 (14:00〜17:30 ➔ 2:00〜5:30)
             const pmRBox = document.getElementById('pm-reserve-btns');
             const pmSlots = generateSlots12H(14, 0, 17, 30, true);
             pmSlots.forEach((t, i) => {
