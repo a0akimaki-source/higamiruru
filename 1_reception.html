@@ -72,11 +72,16 @@
 
     <script>
         let patients = [];
+        
+        // 🌟【最重要】ブラウザのセキュリティブロックを突破するための合鍵を生成 (staff:7777)
+        const AUTH_HEADER = "Basic " + btoa("staff:7777");
 
-        // サーバーの金庫から最新データを自動で読み込む処理
+        // 🌟合鍵（Headers）を持たせてサーバーの金庫から最新データを自動で読み込む処理
         async function loadPatients() {
             try {
-                const response = await fetch('/api/sync');
+                const response = await fetch('/api/sync', {
+                    headers: { 'Authorization': AUTH_HEADER }
+                });
                 if (response.status === 401) return;
                 const data = await response.json();
                 patients = Array.isArray(data) ? data : [];
@@ -86,13 +91,16 @@
                 console.error("データ同期エラー:", e);
             }
         }
-        // 🌟【通信バグ完全解消】サーバーへ正しいJSON文字列形式でデータを保存する処理
+          // 🌟【通信バグ完全解消】合鍵を持たせてデータを金庫に確実に保存する処理
         async function savePatients(newPatients) {
             try {
                 await fetch('/api/sync', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newPatients) // 正しいオブジェクト配列を送信
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': AUTH_HEADER
+                    },
+                    body: JSON.stringify(newPatients)
                 });
                 patients = newPatients;
                 updateButtonStates();
@@ -111,7 +119,6 @@
         async function addPatient(label, monitorLabel, type, btnId) {
             await loadPatients();
             
-            // 🌟 所要時間を100%正確に計算するため、ハイフンで区切った正規のタイムスタンプIDを生成
             const nowMillis = Date.now();
             const patient = {
                 id: 'p-' + nowMillis + '-' + Math.floor(Math.random()*100),
@@ -214,4 +221,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
