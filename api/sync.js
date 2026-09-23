@@ -1,6 +1,8 @@
-// 🌟【Vercel KV 最新正式仕様・通信エラー完全解消版】
+
+// 🌟【Vercel KV 正式仕様・通信エラー完全解消版】
 // Vercelで確認した「redis://」から始まるURLを貼り付けてください
 const REDIS_URL = "redis://default:nL0gsSSOYQIRBAbG9dSTeRHyhiHAlhK4@fuel-perfect-ultrapolished-46352.db.redis.io:14291";
+
 
 export default async function handler(req, res) {
   // 🌟 ブラウザの通信拒否（CORSエラー）を防ぐためのセキュリティ解除命令
@@ -14,13 +16,13 @@ export default async function handler(req, res) {
   }
   
   try {
-    // 🔐 1. HTML内でのパスワードチェック
+    // 🔐 1. パスワードチェック (staff:7777)
     const auth = req.headers.authorization;
     if (!auth || auth !== "Basic c3RhZmY6Nzc3Nw==") {
       return res.status(200).json({ authError: true, msg: "認証が必要です。" });
     }
 
-    // 🌍 2. データの自動同期（Vercel KV の正式仕様に合わせて再構築）
+    // 🌍 2. データの自動同期（redis-cinnabar-batteryの通信仕様に完全最適化）
     const cleanUrl = REDIS_URL.trim().replace(/'/g, "").replace(/"/g, "");
     const match = cleanUrl.match(/redis:\/\/([^:]+):([^@]+)@([^:]+):(\d+)/);
     if (!match) {
@@ -30,35 +32,27 @@ export default async function handler(req, res) {
     const kvRestUrl = `https://${host}`;
 
     if (req.method === 'POST') {
-      // 🌟【最重要修正】Vercel KVのエンドポイントルールに基づき、正しく文字データとして金庫へ格納するリクエスト形式
+      // 🌟【最重要：修正】Vercel KVの正式な保存ルールに合わせた形式
       const patientsData = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
       
       const response = await fetch(`${kvRestUrl}/`, {
         method: 'POST',
         headers: { 
-          'Authorization': `Bearer ${password}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${password}`
         },
-        body: JSON.stringify({
-          command: "set",
-          args: ["patients", patientsData]
-        })
+        body: JSON.stringify(["set", "patients", patientsData]) // 🌟この配列形式が正規のルールです
       });
-      await response.json(); // 応答を確実に解析してサーバーの処理を完了させる
+      await response.json(); 
       return res.status(200).json({ success: true });
 
     } else {
-      // 🌟【最重要修正】金庫の「patients」という棚からデータを正しく取り出すリクエスト形式
+      // 🌟【最重要：修正】Vercel KVの正式な読み出しルールに合わせた形式
       const response = await fetch(`${kvRestUrl}/`, {
         method: 'POST',
         headers: { 
-          'Authorization': `Bearer ${password}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${password}`
         },
-        body: JSON.stringify({
-          command: "get",
-          args: ["patients"]
-        })
+        body: JSON.stringify(["get", "patients"]) // 🌟この配列形式が正規のルールです
       });
       const data = await response.json();
       
